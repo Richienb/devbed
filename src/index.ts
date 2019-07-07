@@ -111,10 +111,10 @@ export class DevBed {
     * @param {Function} callback - The callback to trigger.
     */
     public on(event: string, callback: Function): void {
-        if (event in ["initialize", "update", "shutdown"]) this.callbacks[event].push(callback)
-        else {
-            this.system.listenForEvent(event, callback);
-        }
+        if (!this.callbacks[event] && !["initialize", "update", "shutdown"].includes(event)) this.system.listenForEvent(event, (ev: any) => {
+            this.callEach(this.callbacks[event], ev)
+        })
+        this.callbacks[event].push(callback)
     }
 
     /**
@@ -134,10 +134,11 @@ export class DevBed {
     * @param {Function} callback - The callback to trigger.
     */
     public once(event: string, callback: Function): void {
-        this.callbacks[event].push(() => {
-            this.off(event, callback)
-            callback()
-        })
+        const handleFire = (ev) => {
+            this.off(event, handleFire)
+            callback(ev)
+        }
+        this.on(event, handleFire)
     }
 
     /** Core: Triggers
