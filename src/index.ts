@@ -50,11 +50,6 @@ export class DevBed {
     private callbacks: any = {}
 
     /**
-    * The config of the script logger
-    */
-    private scriptLoggerConfig: any
-
-    /**
     * The API version targeted by DevBed.
     */
     public version = {
@@ -67,11 +62,11 @@ export class DevBed {
     * @param {any} c - The client object.
     */
     constructor(c: any = client) {
-        this.system = c.registerSystem(this.version.major, this.version.minor);
+        this.system = c.registerSystem(this.version.major, this.version.minor)
 
         this.system.initialize = (ev: any) => {
             this.callEach(this.callbacks.initialize, ev)
-        };
+        }
 
         this.system.update = (ev: any) => {
             this.ticks++
@@ -86,7 +81,7 @@ export class DevBed {
         this.system.registerEventData("devbed:ev", eventDataDefaults)
 
         this.system.listenForEvent("devbed:ev", (ev: { data: { isDevBed: any; name: string | number; data: any; }; }) => {
-            if (!ev.data.isDevBed) return;
+            if (!ev.data.isDevBed) return
             this.callEach(this.callbacks[ev.data.name], ev.data.data)
         })
     }
@@ -139,7 +134,7 @@ export class DevBed {
     * @param {Function} callback - The callback to trigger.
     */
     public once(event: string, callback: Function): void {
-        const handleFire = (ev) => {
+        const handleFire = (ev: any) => {
             this.off(event, handleFire)
             callback(ev)
         }
@@ -157,10 +152,10 @@ export class DevBed {
     * @param {any} [send=name] - The object describing where to send the event.
     */
     private sendEvent(name: string, data: object = {}, send: any = name) {
-        let eventData = this.system.createEventData(name);
+        let eventData = this.system.createEventData(name)
         eventData.data = { ...eventData.data, ...data }
 
-        this.system.broadcastEvent(send, eventData);
+        this.system.broadcastEvent(send, eventData)
     }
 
     /**
@@ -192,7 +187,7 @@ export class DevBed {
     * @param {string} message - The message to post.
     */
     public chat(message: string): void {
-        this.sendEvent("minecraft:display_chat_event", { message }, SendToMinecraftClient.DisplayChat)
+        this.sendEvent("minecraft:display_chat_event", { message })
     }
 
     /**
@@ -204,14 +199,41 @@ export class DevBed {
         warning = false,
         error = true
     } = {}): void {
-        if (!this.scriptLoggerConfig) this.scriptLoggerConfig = this.system.createEventData(SendToMinecraftClient.ScriptLoggerConfig);
-        this.scriptLoggerConfig.data = {
-            ...this.scriptLoggerConfig.data,
+        this.sendEvent("minecraft:script_logger_config", {
+            log_information: info,
             log_errors: error,
-            log_warnings: warning,
-            log_information: info
-        }
-        this.system.broadcastEvent(SendToMinecraftClient.ScriptLoggerConfig, this.scriptLoggerConfig);
+            log_warnings: warning
+        })
+    }
+    
+    /** Core: Queries
+    *   =============   */
+
+    /**
+    * Query for an object.
+    * @method
+    * @param {any} component - The component to query.
+    * @param {[any, any, any]} fields - The 3 query fields as an array of strings.
+    */
+    public query(component: any, fields?: [any, any, any]): any {
+        let q = fields ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery(component)
+        q.__proto__.filter = (identifier: any) => this.system.addFilterToQuery(q, identifier)
+        q.__proto__.entities = (cfields?: [any, any, any, any, any, any]) => cfields ?
+            this.system.getEntitiesFromQuery(q, cfields[0], cfields[1], cfields[2], cfields[3], cfields[4], cfields[5]) :
+            this.system.getEntitiesFromQuery(q)
+    }
+    
+    /**
+    * Execute a slash command.
+    * @method
+    * @param {any} command - The command to execute.
+    * @param {Function} callback - The callback to invoke when the command returned data.
+    */
+    public cmd(command: string, callback?: Function): void {
+        if (!command.startsWith("/")) command = `/${command}`
+        this.system.executeCommand(command, ({data}: any) => {
+            if (callback) callback(data)
+        })
     }
 
     /** Core: Data
@@ -226,7 +248,7 @@ export class DevBed {
     * @param {any} value - The value to set the data to.
     */
     public data(ref: any, name: any, path?: string, value?: any): void | any {
-        let data = this.system.getComponent(ref, name);
+        let data = this.system.getComponent(ref, name)
         if (!value) return path ? dotProp.get(data, path) : data
         if (path) dotProp.set(data, path, value)
         else data = value
