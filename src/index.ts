@@ -111,10 +111,12 @@ export class DevBed {
     * @param {Function} callback - The callback to trigger.
     */
     public on(event: string, callback: Function): void {
-        if (!this.callbacks[event] && !["initialize", "update", "shutdown"].includes(event)) this.system.listenForEvent(event, (ev: any) => {
-            this.callEach(this.callbacks[event], ev)
+        event.split(" ").map(e => {
+            if (!this.callbacks[e] && !["initialize", "update", "shutdown"].includes(e)) this.system.listenForEvent(e, (ev: any) => {
+                this.callEach(this.callbacks[e], ev)
+            })
+            this.callbacks[e].push(callback)
         })
-        this.callbacks[event].push(callback)
     }
 
     /**
@@ -123,8 +125,11 @@ export class DevBed {
     * @param {string} event - The event identifier.
     * @param {Function} callback - The callback to remove.
     */
-    public off(event: string, callback: Function): void {
-        this.callbacks[event] = this.callbacks[event].filter((val: Function) => val !== callback)
+    public off(event: string, callback?: Function): void {
+        event.split(" ").map(e => {
+            if (callback) this.callbacks[e] = this.callbacks[e].filter((val: Function) => val !== callback)
+            else this.callbacks[e] = []
+        })
     }
 
     /**
