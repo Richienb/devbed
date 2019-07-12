@@ -145,17 +145,16 @@ export class DevBed {
     *   ==============   */
 
     /**
-    * Send an event.
+    * Trigger an event.
     * @method
     * @param {string} name - The name of the event to post.
     * @param {object} [data={}] - The data to include in the event.
-    * @param {any} [send=name] - The object describing where to send the event.
     */
-    private sendEvent(name: string, data: object = {}, send: any = name) {
+    public trigger(name: string, data: object = {}) {
         let eventData = this.system.createEventData(name)
         eventData.data = { ...eventData.data, ...data }
 
-        this.system.broadcastEvent(send, eventData)
+        this.system.broadcastEvent(name, eventData)
     }
 
     /**
@@ -165,17 +164,7 @@ export class DevBed {
     * @param {string} data - The data to pass to the event handlers.
     */
     public bc(name: string, data: object = {}): void {
-        this.sendEvent("devbed:ev", { name, data })
-    }
-
-    /**
-    * Trigger an event.
-    * @method
-    * @param {string} event - The event identifier.
-    * @param {Function} data - The data to pass to the event handlers.
-    */
-    public trigger(event: string, data: object = {}) {
-        this.sendEvent(event, data)
+        this.trigger("devbed:ev", { name, data })
     }
 
     /** Ext: Triggers
@@ -187,7 +176,7 @@ export class DevBed {
     * @param {string} message - The message to post.
     */
     public chat(message: string): void {
-        this.sendEvent("minecraft:display_chat_event", { message })
+        this.trigger("minecraft:display_chat_event", { message })
     }
 
     /**
@@ -199,7 +188,7 @@ export class DevBed {
         warning = false,
         error = true
     } = {}): void {
-        this.sendEvent("minecraft:script_logger_config", {
+        this.trigger("minecraft:script_logger_config", {
             log_information: info,
             log_errors: error,
             log_warnings: warning
