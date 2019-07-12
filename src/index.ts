@@ -199,6 +199,20 @@ export class DevBed {
     *   =============   */
 
     /**
+    * Set a prototype value.
+    * @method
+    * @param {any} val - The variable to modify.
+    * @param {string} name - The name of the prototype reference.
+    * @param {Function} func - The function to trigger when the prototype value is invoked.
+    */
+    private setProto(val: any, name: string, func: Function): any {
+        let prot = Object.getPrototypeOf(val)
+        prot[name] = func
+        Object.setPrototypeOf(val, prot)
+        return val
+    }
+
+    /**
     * Query for an object.
     * @method
     * @param {any} component - The component to query.
@@ -206,10 +220,10 @@ export class DevBed {
     */
     public query(component: any, fields?: [any, any, any]): any {
         let q = fields ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery(component)
-        q.__proto__.filter = (identifier: any) => this.system.addFilterToQuery(q, identifier)
-        q.__proto__.entities = (cfields?: [any, any, any, any, any, any]) => cfields ?
+        q = this.setProto(q, "filter", (identifier: any) => this.system.addFilterToQuery(q, identifier))
+        q = this.setProto(q, "entities", (cfields?: [any, any, any, any, any, any]) => cfields ?
             this.system.getEntitiesFromQuery(q, cfields[0], cfields[1], cfields[2], cfields[3], cfields[4], cfields[5]) :
-            this.system.getEntitiesFromQuery(q)
+            this.system.getEntitiesFromQuery(q))
     }
     
     /**
