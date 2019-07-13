@@ -19,6 +19,9 @@
   "dependencies": {
     "dot-prop": "^5.1.0"
   },
+  "peerDependencies": {
+    "minecraft-addon-toolchain": "^1.0.3"
+  },
   "resolutions": {
     "microbundle/rollup-plugin-postcss/cssnano/postcss-svgo/svgo/js-yaml": "^3.13.0",
     "typedoc/marked": "^0.6.2",
