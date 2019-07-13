@@ -18,5 +18,10 @@
   },
   "dependencies": {
     "dot-prop": "^5.1.0"
+  },
+  "resolutions": {
+    "microbundle/rollup-plugin-postcss/cssnano/postcss-svgo/svgo/js-yaml": "^3.13.0",
+    "typedoc/marked": "^0.6.2",
+    "microbundle/rollup-plugin-typescript2/rollup-pluginutils/micromatch/braces": "^2.3.1"
   }
 }

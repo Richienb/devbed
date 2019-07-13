@@ -59,10 +59,10 @@ export class DevBed {
 
     /**
     * @method
-    * @param c - The client object.
+    * @param c - The client or server object.
     */
-    constructor(c: any = client) {
-        this.system = c.registerSystem(this.version.major, this.version.minor)
+    constructor(o: any) {
+        this.system = o.registerSystem(this.version.major, this.version.minor)
 
         this.system.initialize = (ev: any) => {
             this.callEach(this.callbacks.initialize, ev)
@@ -86,8 +86,66 @@ export class DevBed {
         })
     }
 
-    /** Core: Listeners
+    /** Entity Bindings
     *   ===============   */
+
+    /**
+    * Create an entity.
+    * @method
+    * @param entityType - The type of entity to create.
+    * @param identifier - The template identifier of the enitity to create.
+    */
+    public entity(entityType?: string, identifier?: string): object {
+        let obj = entityType && identifier ? this.system.createEntity(entityType, identifier) : this.system.createEntity()
+        if (typeof obj === "object") {
+            obj.destroy = () => this.system.destroyEntity(obj)
+            obj.isValid = () => this.system.isValidEntity(obj)
+        }
+        return obj
+    }
+
+    /** Component Bindings
+    *   ==================   */
+
+    /**
+    * Create a component.
+    * @method
+    * @param id - The identifier of the component to create.
+    * @param data - The date to associate with the compontent.
+    */
+    public component(id: string, data: object): object {
+        let obj = this.system.registerComponent(id, data)
+        if (typeof obj === "object") {
+            obj.add = (ident: string) => this.system.createComponent(id, ident)
+            obj.has = (ent: object) => this.system.hasComponent(ent, id)
+            obj.data = (ent: object, apply: boolean = false) => {
+                this.system.getComponent(ent, id)
+                if (apply) obj.reload(ent)
+            }
+            obj.reload = (ent: object) => this.system.applyComponentChanges(ent, id)
+            obj.remove = (ent: object) => this.system.destroyComponent(ent, id)
+        }
+        return obj
+    }
+
+    /**
+    * Get or set data.
+    * @method
+    * @param ref - The reference to the component.
+    * @param name - The name of the component in the reference.
+    * @param path - The path of the component.
+    * @param value - The value to set the data to.
+    */
+    public data(ref: object, name: string, path?: string, value?: any): void | object | null {
+        let data = this.system.getComponent(ref, name)
+        if (!value) return path ? dotProp.get(data, path) : data
+        if (path) dotProp.set(data, path, value)
+        else data = value
+        this.system.applyComponentChanges(ref, data)
+    }
+
+    /** Event Bindings
+    *   ==============   */
 
     /**
     * Call each callback in the array with the provided data.
@@ -141,9 +199,6 @@ export class DevBed {
         this.on(event, handleFire)
     }
 
-    /** Core: Triggers
-    *   ==============   */
-
     /**
     * Trigger an event.
     * @method
@@ -166,9 +221,6 @@ export class DevBed {
     public bc(name: string, data: object = {}): void {
         this.trigger("devbed:ev", { name, data })
     }
-
-    /** Ext: Triggers
-    *   =============   */
 
     /**
     * Post a message in chat.
@@ -195,22 +247,8 @@ export class DevBed {
         })
     }
 
-    /** Core: Queries
-    *   =============   */
-
-    /**
-    * Set a prototype value.
-    * @method
-    * @param val - The variable to modify.
-    * @param name - The name of the prototype reference.
-    * @param func - The function to trigger when the prototype value is invoked.
-    */
-    private setProto(val: any, name: string, func: Function): any {
-        let prot = Object.getPrototypeOf(val)
-        prot[name] = func
-        Object.setPrototypeOf(val, prot)
-        return val
-    }
+    /** Entity Queries
+    *   ==============   */
 
     /**
     * Query for an object.
@@ -218,12 +256,15 @@ export class DevBed {
     * @param component - The component to query.
     * @param fields - The 3 query fields as an array of strings.
     */
-    public query(component: any, fields?: [any, any, any]): any {
-        let q = fields ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery(component)
-        q = this.setProto(q, "filter", (identifier: any) => this.system.addFilterToQuery(q, identifier))
-        q = this.setProto(q, "entities", (cfields?: [any, any, any, any, any, any]) => cfields ?
-            this.system.getEntitiesFromQuery(q, cfields[0], cfields[1], cfields[2], cfields[3], cfields[4], cfields[5]) :
-            this.system.getEntitiesFromQuery(q))
+    public query(component: string, fields?: [string, string, string]): any {
+        let obj = fields ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery(component)
+        if (typeof obj === "object") {
+            obj.filter = (identifier: string) => this.system.addFilterToQuery(obj, identifier)
+            obj.entities = (cfields?: [number, number, number, number, number, number]) => cfields ?
+                this.system.getEntitiesFromQuery(obj, cfields[0], cfields[1], cfields[2], cfields[3], cfields[4], cfields[5]) :
+                this.system.getEntitiesFromQuery(obj)
+        }
+        return obj
     }
 
     /**
@@ -237,24 +278,5 @@ export class DevBed {
         this.system.executeCommand(command, ({ data }: any) => {
             if (callback) callback(data)
         })
-    }
-
-    /** Core: Data
-    *   ==========   */
-
-    /**
-    * Get or set data.
-    * @method
-    * @param ref - The reference to the component.
-    * @param name - The name of the component in the reference.
-    * @param path - The path of the component.
-    * @param value - The value to set the data to.
-    */
-    public data(ref: any, name: any, path?: string, value?: any): void | any {
-        let data = this.system.getComponent(ref, name)
-        if (!value) return path ? dotProp.get(data, path) : data
-        if (path) dotProp.set(data, path, value)
-        else data = value
-        this.system.applyComponentChanges(ref, data)
     }
 }
