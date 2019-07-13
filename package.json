@@ -6,14 +6,15 @@
   "author": "Richie Bendall <richiebendall@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "build:js": "tsc",
+    "build": "yarn build:js && yarn build:docs",
+    "build:js": "microbundle --target node",
     "build:docs": "typedoc --out ./docs --mode file ./src"
   },
   "devDependencies": {
+    "microbundle": "^0.11.0",
     "minecraft-scripting-types-client": "^1.0.0",
     "minecraft-scripting-types-server": "^1.0.0",
-    "typedoc": "^0.14.2",
-    "typescript": "^3.5.3"
+    "typedoc": "^0.14.2"
   },
   "dependencies": {
     "dot-prop": "^5.1.0"
