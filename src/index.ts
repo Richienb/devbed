@@ -62,7 +62,7 @@ export class DevBed {
     * @method
     * @param c - The client or server object.
     */
-    constructor(o: any) {
+    constructor(o: IClient | IServer) {
         this.system = o.registerSystem(this.version.major, this.version.minor)
 
         this.system.initialize = (ev: any) => {
@@ -86,6 +86,10 @@ export class DevBed {
             this.callEach(this.callbacks[ev.data.name], ev.data.data)
         })
     }
+
+
+    /** *Script Bindings*
+    *   =================   */
 
     /** Entity Bindings
     *   ===============   */
@@ -164,7 +168,7 @@ export class DevBed {
     * @param event - The event identifier.
     * @param callback - The callback to trigger.
     */
-    public on(event: string, callback: Function): void {
+    public on(event: SendToMinecraftClient | SendToMinecraftServer, callback: Function): void {
         event.split(" ").map(e => {
             if (!this.callbacks[e] && !["initialize", "update", "shutdown"].includes(e)) this.system.listenForEvent(e, (ev: any) => {
                 this.callEach(this.callbacks[e], ev)
@@ -179,7 +183,7 @@ export class DevBed {
     * @param event - The event identifier.
     * @param callback - The callback to remove.
     */
-    public off(event: string, callback?: Function): void {
+    public off(event: SendToMinecraftClient | SendToMinecraftServer, callback?: Function): void {
         event.split(" ").map(e => {
             if (callback) this.callbacks[e] = this.callbacks[e].filter((val: Function) => val !== callback)
             else this.callbacks[e] = []
@@ -192,7 +196,7 @@ export class DevBed {
     * @param event - The event identifier.
     * @param callback - The callback to trigger.
     */
-    public once(event: string, callback: Function): void {
+    public once(event: SendToMinecraftClient | SendToMinecraftServer, callback: Function): void {
         const handleFire = (ev: any) => {
             this.off(event, handleFire)
             callback(ev)
@@ -257,7 +261,7 @@ export class DevBed {
     * @param component - The component to query.
     * @param fields - The 3 query fields as an array of strings.
     */
-    public query(component: string, fields?: [string, string, string]): any {
+    public query(component: string, fields?: [string, string, string]): IQuery {
         let obj = fields ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery(component)
         if (typeof obj === "object") {
             obj.filter = (identifier: string) => this.system.addFilterToQuery(obj, identifier)
@@ -267,6 +271,9 @@ export class DevBed {
         }
         return obj
     }
+
+    /** Slash Commands
+    *   ==============   */
 
     /**
     * Execute a slash command.
@@ -279,5 +286,18 @@ export class DevBed {
         this.system.executeCommand(command, ({ data }: any) => {
             if (callback) callback(data)
         })
+    }
+
+    /** Block Bindings
+    *   ==============   */
+
+    /**
+    * Get blocks from the world.
+    * @method
+    * @param area - The ticking area to use.
+    * @param coords - 3 coords specifying the location of a block or 6 for an area of blocks.
+    */
+    public block(area: ITickingArea, coords: [number, number, number] | [number, number, number, number, number, number]): IBlock {
+        return coords.length === 3 ? this.system.getBlock(area, coords[0], coords[1], coords[2]) : this.system.getBlock(area, coords[0], coords[1], coords[2], coords[3], coords[4], coords[5])
     }
 }
