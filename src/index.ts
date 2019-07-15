@@ -28,13 +28,29 @@
  */
 
 interface BedEntity extends IEntity {
-    destroy: Function,
-    invalid: Function
+    /**
+     * Destroy the entity object.
+     * */
+    remove: true | null,
+
+    /**
+     * Check if the entity object is valid.
+     * */
+    isValid: boolean | null
 }
 
 interface BedQuery extends IQuery {
-    filter: Function,
-    entities: Function
+    /**
+     * Add a filter to the query.
+     * @param identifier The identifier to use in the query.
+     * */
+    filter(identifier: string): void,
+
+    /**
+     * Get the entities that the query captured.
+     * @param cfields Filter the result by component fields.
+     * */
+    entities(cfields?: [number, number, number, number, number, number]): any[] | null
 }
 
 interface BedComponent extends IComponent<any> {
@@ -152,8 +168,8 @@ export class DevBed {
     public entity(entityType?: string, identifier?: string): BedEntity | null {
         let obj = entityType && identifier ? this.system.createEntity(entityType, identifier) : this.system.createEntity()
         if (typeof obj === "object") {
-            obj.destroy = () => this.system.destroyEntity(obj)
-            obj.isValid = () => this.system.isValidEntity(obj)
+            obj.remove = (): true | null => this.system.destroyEntity(obj)
+            obj.isValid = (): boolean | null => this.system.isValidEntity(obj)
         }
         return obj
     }
@@ -295,8 +311,8 @@ export class DevBed {
     public query(component: string, fields?: [string, string, string]): BedQuery | null {
         let obj = fields ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery(component)
         if (typeof obj === "object") {
-            obj.filter = (identifier: string) => this.system.addFilterToQuery(obj, identifier)
-            obj.entities = (cfields?: [number, number, number, number, number, number]) => cfields ?
+            obj.filter = (identifier: string): void => this.system.addFilterToQuery(obj, identifier)
+            obj.entities = (cfields?: [number, number, number, number, number, number]): any[] | null => cfields ?
                 this.system.getEntitiesFromQuery(obj, cfields[0], cfields[1], cfields[2], cfields[3], cfields[4], cfields[5]) :
                 this.system.getEntitiesFromQuery(obj)
         }
