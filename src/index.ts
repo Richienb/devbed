@@ -1,8 +1,6 @@
 /// <reference types="minecraft-scripting-types-client" />
 /// <reference types="minecraft-scripting-types-server" />
 
-import * as dotProp from "dot-prop"
-
 /**
  * @license
  *
@@ -29,10 +27,50 @@ import * as dotProp from "dot-prop"
  * SOFTWARE.
  */
 
-/**
- * A simplified implementation of the Minecraft Bedrock API.
- * @class
- */
+interface BedEntity extends IEntity {
+    destroy: Function,
+    invalid: Function
+}
+
+interface BedQuery extends IQuery {
+    filter: Function,
+    entities: Function
+}
+
+interface BedComponent extends IComponent<any> {
+    /**
+     * Add the component to an entity.
+     * @param ident The identifier of the entity.
+     * @param existsOk If false an error will be thrown if the component already exists on the entity.
+     * */
+    add(ent: IEntity | BedEntity, existsOk: boolean): boolean | null,
+
+    /**
+    * Check if an entity has a component.
+    * @param ent The identifier of the entity.
+    * */
+    has(ent: IEntity | BedEntity): boolean | null,
+
+    /**
+    * Check if an entity has a component.
+    * @param ent The identifier of the entity.
+    * @param data The data to change provided as an object or as a Function that takes and returns a value.
+    * */
+    data(ent: IEntity | BedEntity, data: object | Function): IComponent<any> | boolean | null,
+
+    /**
+    * Reload the component.
+    * @param ent The identifier of the entity.
+    * */
+    reload(ent: IEntity | BedEntity): boolean | null,
+
+    /**
+    * Remove the component from an entity.
+    * @param ent The identifier of the entity.
+    * */
+    remove(ent: IEntity | BedEntity): boolean | null
+}
+
 export class DevBed {
 
     /**
@@ -59,8 +97,7 @@ export class DevBed {
     }
 
     /**
-    * @method
-    * @param c - The client or server object.
+    * @param c The client or server object.
     */
     constructor(o: IClient | IServer) {
         this.system = o.registerSystem(this.version.major, this.version.minor)
@@ -87,6 +124,19 @@ export class DevBed {
         })
     }
 
+    /**
+    * The amount of ids that have already been created.
+    */
+    private ids = -1
+
+    /**
+    * Get a new ID for DevBed to use.
+    */
+    private getId(): string {
+        this.ids++
+        return `devbed_${this.ids}`
+    }
+
 
     /** *Script Bindings*
     *   =================   */
@@ -96,11 +146,10 @@ export class DevBed {
 
     /**
     * Create an entity.
-    * @method
-    * @param entityType - The type of entity to create.
-    * @param identifier - The template identifier of the enitity to create.
+    * @param entityType The type of entity to create.
+    * @param identifier The template identifier of the enitity to create.
     */
-    public entity(entityType?: string, identifier?: string): object {
+    public entity(entityType?: string, identifier?: string): BedEntity | null {
         let obj = entityType && identifier ? this.system.createEntity(entityType, identifier) : this.system.createEntity()
         if (typeof obj === "object") {
             obj.destroy = () => this.system.destroyEntity(obj)
@@ -114,39 +163,30 @@ export class DevBed {
 
     /**
     * Create a component.
-    * @method
-    * @param id - The identifier of the component to create.
-    * @param data - The date to associate with the compontent.
+    * @param id The identifier of the component to create.
+    * @param data The date to associate with the compontent.
     */
-    public component(id: string, data: object): object {
+    public component(id: string = this.getId(), data: object): BedComponent | null {
         let obj = this.system.registerComponent(id, data)
         if (typeof obj === "object") {
-            obj.add = (ident: string) => this.system.createComponent(id, ident)
-            obj.has = (ent: object) => this.system.hasComponent(ent, id)
-            obj.data = (ent: object, apply: boolean = false) => {
-                this.system.getComponent(ent, id)
-                if (apply) obj.reload(ent)
+            obj.add = (ent: IEntity | BedEntity, existsOk: boolean = false): boolean | null => {
+                if (!existsOk && obj.has(ent)) throw new TypeError("Component already exists!")
+                return this.system.createComponent(id, ent)
             }
-            obj.reload = (ent: object) => this.system.applyComponentChanges(ent, id)
-            obj.remove = (ent: object) => this.system.destroyComponent(ent, id)
+            obj.has = (ent: IEntity | BedEntity): boolean | null => this.system.hasComponent(ent, id)
+            obj.data = (ent: IEntity | BedEntity, data?: object | Function): IComponent<any> | boolean | null => {
+                let curr = this.system.getComponent(ent, id)
+                if (!data) return curr
+
+                if (typeof data === "function") curr = data(curr)
+                else curr = { ...curr, ...data }
+
+                return this.system.applyComponentChanges(ent, curr)
+            }
+            obj.reload = (ent: IEntity | BedEntity): boolean | null => this.system.applyComponentChanges(ent, id)
+            obj.remove = (ent: IEntity | BedEntity): boolean | null => this.system.destroyComponent(ent, id)
         }
         return obj
-    }
-
-    /**
-    * Get or set data.
-    * @method
-    * @param ref - The reference to the component.
-    * @param name - The name of the component in the reference.
-    * @param path - The path of the component.
-    * @param value - The value to set the data to.
-    */
-    public data(ref: object, name: string, path?: string, value?: any): void | object | null {
-        let data = this.system.getComponent(ref, name)
-        if (!value) return path ? dotProp.get(data, path) : data
-        if (path) dotProp.set(data, path, value)
-        else data = value
-        this.system.applyComponentChanges(ref, data)
     }
 
     /** Event Bindings
@@ -154,9 +194,8 @@ export class DevBed {
 
     /**
     * Call each callback in the array with the provided data.
-    * @method
-    * @param arr - The array of callbacks.
-    * @param data - The data to provide in the callback.
+    * @param arr The array of callbacks.
+    * @param data The data to provide in the callback.
     */
     private callEach(arr: Function[], data?: any): void {
         if (Array.isArray(arr)) arr.map((cb: Function) => cb(data))
@@ -164,9 +203,8 @@ export class DevBed {
 
     /**
     * Listen for an event.
-    * @method
-    * @param event - The event identifier.
-    * @param callback - The callback to trigger.
+    * @param event The event identifier.
+    * @param callback The callback to trigger.
     */
     public on(event: SendToMinecraftClient | SendToMinecraftServer, callback: Function): void {
         event.split(" ").map(e => {
@@ -179,9 +217,8 @@ export class DevBed {
 
     /**
     * Remove an event listener for an event.
-    * @method
-    * @param event - The event identifier.
-    * @param callback - The callback to remove.
+    * @param event The event identifier.
+    * @param callback The callback to remove.
     */
     public off(event: SendToMinecraftClient | SendToMinecraftServer, callback?: Function): void {
         event.split(" ").map(e => {
@@ -192,9 +229,8 @@ export class DevBed {
 
     /**
     * Listen for an event and trigger the callback once.
-    * @method
-    * @param event - The event identifier.
-    * @param callback - The callback to trigger.
+    * @param event The event identifier.
+    * @param callback The callback to trigger.
     */
     public once(event: SendToMinecraftClient | SendToMinecraftServer, callback: Function): void {
         const handleFire = (ev: any) => {
@@ -206,9 +242,8 @@ export class DevBed {
 
     /**
     * Trigger an event.
-    * @method
-    * @param name - The name of the event to post.
-    * @param data - The data to include in the event.
+    * @param name The name of the event to post.
+    * @param data The data to include in the event.
     */
     public trigger(name: string, data: object = {}) {
         let eventData = this.system.createEventData(name)
@@ -219,9 +254,8 @@ export class DevBed {
 
     /**
     * Broadcast a custom event.
-    * @method
-    * @param message - The message to post.
-    * @param data - The data to pass to the event handlers.
+    * @param message The message to post.
+    * @param data The data to pass to the event handlers.
     */
     public bc(name: string, data: object = {}): void {
         this.trigger("devbed:ev", { name, data })
@@ -229,8 +263,7 @@ export class DevBed {
 
     /**
     * Post a message in chat.
-    * @method
-    * @param message - The message to post.
+    * @param message The message to post.
     */
     public chat(message: string): void {
         this.trigger("minecraft:display_chat_event", { message })
@@ -238,7 +271,6 @@ export class DevBed {
 
     /**
     * Configure the logging.
-    * @method
     */
     public logconfig({
         info = false,
@@ -257,11 +289,10 @@ export class DevBed {
 
     /**
     * Query for an object.
-    * @method
-    * @param component - The component to query.
-    * @param fields - The 3 query fields as an array of strings.
+    * @param component The component to query.
+    * @param fields The 3 query fields as an array of strings.
     */
-    public query(component: string, fields?: [string, string, string]): IQuery {
+    public query(component: string, fields?: [string, string, string]): BedQuery | null {
         let obj = fields ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery(component)
         if (typeof obj === "object") {
             obj.filter = (identifier: string) => this.system.addFilterToQuery(obj, identifier)
@@ -277,9 +308,8 @@ export class DevBed {
 
     /**
     * Execute a slash command.
-    * @method
-    * @param command - The command to execute.
-    * @param callback - The callback to invoke when the command returned data.
+    * @param command The command to execute.
+    * @param callback The callback to invoke when the command returned data.
     */
     public cmd(command: string, callback?: Function): void {
         if (!command.startsWith("/")) command = `/${command}`
@@ -293,9 +323,8 @@ export class DevBed {
 
     /**
     * Get blocks from the world.
-    * @method
-    * @param area - The ticking area to use.
-    * @param coords - 3 coords specifying the location of a block or 6 for an area of blocks.
+    * @param area The ticking area to use.
+    * @param coords 3 coords specifying the location of a block or 6 for an area of blocks.
     */
     public block(area: ITickingArea, coords: [number, number, number] | [number, number, number, number, number, number]): IBlock {
         return coords.length === 3 ? this.system.getBlock(area, coords[0], coords[1], coords[2]) : this.system.getBlock(area, coords[0], coords[1], coords[2], coords[3], coords[4], coords[5])
