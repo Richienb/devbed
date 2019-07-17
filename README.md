@@ -1,6 +1,8 @@
 # DevBed
 
-A simplified implementation of the Minecraft Bedrock Scripting API.
+A simplified implementation of the Minecraft Bedrock Scripting API. For more info, read the [docs](https://richienb.github.io/devbed).
+
+[![NPM Badge](https://nodei.co/npm/devbed.png)](https://npmjs.com/package/devbed)
 
 ## Example
 
