@@ -1,6 +1,3 @@
-/// <reference types="minecraft-scripting-types-client" />
-/// <reference types="minecraft-scripting-types-server" />
-
 /**
  * @license
  *
@@ -26,6 +23,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+/// <reference types="minecraft-scripting-types-client" />
+/// <reference types="minecraft-scripting-types-server" />
 
 interface BedEntity extends IEntity {
     /**
@@ -107,7 +107,7 @@ export class DevBed {
     /**
     * The API version targeted by DevBed.
     */
-    public version = {
+    public readonly version = {
         major: 0,
         minor: 0
     }
@@ -178,6 +178,17 @@ export class DevBed {
     *   ==================   */
 
     /**
+    * Parse the transformation of an array or object.
+    * @param data The object to be transformed.
+    * @param transform The transformation to apply.
+    */
+    private parseTransform(data: object | any[], transform: object | any[] | Function): object | any[] | void {
+        if (Array.isArray(data) && Array.isArray(transform)) return [...data, ...transform]
+        else if (typeof data === "object" && typeof transform === "object") return { ...data, ...transform }
+        else if (typeof transform === "function") return transform(data)
+    }
+
+    /**
     * Create a component.
     * @param id The identifier of the component to create.
     * @param data The date to associate with the compontent.
@@ -185,7 +196,7 @@ export class DevBed {
     public component(id: string = this.getId(), data: object): BedComponent | null {
         let obj = this.system.registerComponent(id, data)
         if (typeof obj === "object") {
-            obj.add = (ent: IEntity | BedEntity, existsOk: boolean = false): boolean | null => {
+            obj.add = (ent: IEntity | BedEntity, existsOk: boolean = true): boolean | null => {
                 if (!existsOk && obj.has(ent)) throw new TypeError("Component already exists!")
                 return this.system.createComponent(id, ent)
             }
@@ -194,10 +205,7 @@ export class DevBed {
                 let curr = this.system.getComponent(ent, id)
                 if (!data) return curr
 
-                if (typeof data === "function") curr = data(curr)
-                else curr = { ...curr, ...data }
-
-                return this.system.applyComponentChanges(ent, curr)
+                return this.system.applyComponentChanges(ent, this.parseTransform(curr, data))
             }
             obj.reload = (ent: IEntity | BedEntity): boolean | null => this.system.applyComponentChanges(ent, id)
             obj.remove = (ent: IEntity | BedEntity): boolean | null => this.system.destroyComponent(ent, id)

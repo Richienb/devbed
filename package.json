@@ -17,8 +17,6 @@
     "typedoc": "^0.14.2"
   },
   "dependencies": {
-    "braces": "^3.0.2",
-    "marked": "^0.7.0"
   },
   "peerDependencies": {
     "minecraft-addon-toolchain": "^1.0.3"
