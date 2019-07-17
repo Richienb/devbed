@@ -87,8 +87,10 @@ interface BedComponent extends IComponent<any> {
     remove(ent: IEntity | BedEntity): boolean | null
 }
 
+/**
+* A simplified implementation of the Minecraft Bedrock Scripting API.
+*/
 export class DevBed {
-
     /**
     * The system object.
     */
@@ -109,7 +111,7 @@ export class DevBed {
     */
     public readonly version = {
         major: 0,
-        minor: 0
+        minor: 0,
     }
 
     /**
@@ -166,7 +168,7 @@ export class DevBed {
     * @param identifier The template identifier of the enitity to create.
     */
     public entity(entityType?: string, identifier?: string): BedEntity | null {
-        let obj = entityType && identifier ? this.system.createEntity(entityType, identifier) : this.system.createEntity()
+        const obj = entityType && identifier ? this.system.createEntity(entityType, identifier) : this.system.createEntity()
         if (typeof obj === "object") {
             obj.remove = (): true | null => this.system.destroyEntity(obj)
             obj.isValid = (): boolean | null => this.system.isValidEntity(obj)
@@ -194,7 +196,7 @@ export class DevBed {
     * @param data The date to associate with the component.
     */
     public component(id: string = this.getId(), data: object): BedComponent | null {
-        let obj = this.system.registerComponent(id, data)
+        const obj = this.system.registerComponent(id, data)
         if (typeof obj === "object") {
             obj.add = (ent: IEntity | BedEntity, existsOk: boolean = true): boolean | null => {
                 if (!existsOk && obj.has(ent)) throw new TypeError("Component already exists!")
@@ -202,7 +204,7 @@ export class DevBed {
             }
             obj.has = (ent: IEntity | BedEntity): boolean | null => this.system.hasComponent(ent, id)
             obj.data = (ent: IEntity | BedEntity, data?: object | Function): IComponent<any> | boolean | null => {
-                let curr = this.system.getComponent(ent, id)
+                const curr = this.system.getComponent(ent, id)
                 if (!data) return curr
 
                 return this.system.applyComponentChanges(ent, this.parseTransform(curr, data))
@@ -231,7 +233,7 @@ export class DevBed {
     * @param callback The callback to trigger.
     */
     public on(event: SendToMinecraftClient | SendToMinecraftServer, callback: Function): void {
-        event.split(" ").map(e => {
+        event.split(" ").map((e) => {
             if (!this.callbacks[e] && !["initialize", "update", "shutdown"].includes(e)) this.system.listenForEvent(e, (ev: any) => this.callEach(this.callbacks[e], ev))
             this.callbacks[e].push(callback)
         })
@@ -243,7 +245,7 @@ export class DevBed {
     * @param callback The callback to remove.
     */
     public off(event: SendToMinecraftClient | SendToMinecraftServer, callback?: Function): void {
-        event.split(" ").map(e => {
+        event.split(" ").map((e) => {
             if (callback) this.callbacks[e] = this.callbacks[e].filter((val: Function) => val !== callback)
             else this.callbacks[e] = []
         })
@@ -268,7 +270,7 @@ export class DevBed {
     * @param data The data to include in the event.
     */
     public trigger(name: string, data: object = {}) {
-        let eventData = this.system.createEventData(name)
+        const eventData = this.system.createEventData(name)
         eventData.data = { ...eventData.data, ...data }
 
         this.system.broadcastEvent(name, eventData)
@@ -297,12 +299,12 @@ export class DevBed {
     public logconfig({
         info = false,
         warning = false,
-        error = true
+        error = true,
     } = {}): void {
         this.trigger("minecraft:script_logger_config", {
             log_information: info,
             log_errors: error,
-            log_warnings: warning
+            log_warnings: warning,
         })
     }
 
@@ -315,7 +317,7 @@ export class DevBed {
     * @param fields The 3 query fields as an array of strings.
     */
     public query(component: string, fields?: [string, string, string]): BedQuery | null {
-        let obj = fields ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery(component)
+        const obj = fields ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery(component)
         if (typeof obj === "object") {
             obj.filter = (identifier: string): void => this.system.addFilterToQuery(obj, identifier)
             obj.entities = (cfields?: [number, number, number, number, number, number]): any[] | null => cfields ?
@@ -361,10 +363,10 @@ export class DevBed {
     /**
     * Get the data of a component stored in level.
     * @param id The id of the component.
-    * @param coords 3 coords specifying the location of a block or 6 for an area of blocks.
+    * @param data The data to set the component to.
     */
-    public level(id: string, data: any[] | object | Function): ILevel {
-        let d = this.system.getComponent(this.system.level, id);
+    public level(id: string, data?: any[] | object | Function): ILevel {
+        const d = this.system.getComponent(this.system.level, id)
         if (!data) return d
         return this.system.applyComponentChanges(this.system.level, id, this.parseTransform(d, data))
     }

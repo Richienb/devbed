@@ -1,0 +1,20 @@
+{
+    "env": {
+        "browser": true,
+        "es6": true,
+        "node": true
+    },
+    "parser": "@typescript-eslint/parser",
+    "plugins": ["@typescript-eslint"],
+    "extends": ["google"],
+    "rules": {
+        "indent": ["error", 4],
+        "quotes": ["error", "double"],
+        "semi": ["error", "never"],
+        "brace-style": 0,
+        "max-len": 0,
+        "valid-jsdoc": 0,
+        "spaced-comment": 0,
+        "object-curly-spacing": 0
+    }
+}
