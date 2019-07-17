@@ -191,7 +191,7 @@ export class DevBed {
     /**
     * Create a component.
     * @param id The identifier of the component to create.
-    * @param data The date to associate with the compontent.
+    * @param data The date to associate with the component.
     */
     public component(id: string = this.getId(), data: object): BedComponent | null {
         let obj = this.system.registerComponent(id, data)
@@ -232,9 +232,7 @@ export class DevBed {
     */
     public on(event: SendToMinecraftClient | SendToMinecraftServer, callback: Function): void {
         event.split(" ").map(e => {
-            if (!this.callbacks[e] && !["initialize", "update", "shutdown"].includes(e)) this.system.listenForEvent(e, (ev: any) => {
-                this.callEach(this.callbacks[e], ev)
-            })
+            if (!this.callbacks[e] && !["initialize", "update", "shutdown"].includes(e)) this.system.listenForEvent(e, (ev: any) => this.callEach(this.callbacks[e], ev))
             this.callbacks[e].push(callback)
         })
     }
@@ -352,5 +350,22 @@ export class DevBed {
     */
     public block(area: ITickingArea, coords: [number, number, number] | [number, number, number, number, number, number]): IBlock {
         return coords.length === 3 ? this.system.getBlock(area, coords[0], coords[1], coords[2]) : this.system.getBlock(area, coords[0], coords[1], coords[2], coords[3], coords[4], coords[5])
+    }
+
+    /** *Script Components*
+    *   =================   */
+
+    /** Entity Bindings
+    *   ===============   */
+
+    /**
+    * Get the data of a component stored in level.
+    * @param id The id of the component.
+    * @param coords 3 coords specifying the location of a block or 6 for an area of blocks.
+    */
+    public level(id: string, data: any[] | object | Function): ILevel {
+        let d = this.system.getComponent(this.system.level, id);
+        if (!data) return d
+        return this.system.applyComponentChanges(this.system.level, id, this.parseTransform(d, data))
     }
 }
