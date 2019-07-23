@@ -1,4 +1,4 @@
-# DevBed
+# DevBed [![Travis CI Build Status](https://img.shields.io/travis/com/Richienb/devbed/master.svg?style=for-the-badge)](https://travis-ci.com/Richienb/devbed)
 
 A simplified implementation of the Minecraft Bedrock Scripting API. For more info, read the [docs](https://richienb.github.io/devbed).
 
