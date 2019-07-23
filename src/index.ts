@@ -116,8 +116,9 @@ export class DevBed {
 
     /**
     * @param c The client or server object.
+    * @param bedspace The main DevBed namespace name to use.
     */
-    constructor(o: IClient | IServer) {
+    constructor(o: IClient | IServer, public bedspace = "devbed") {
         this.system = o.registerSystem(this.version.major, this.version.minor)
 
         this.system.initialize = (ev: any) => {
@@ -134,10 +135,10 @@ export class DevBed {
         }
 
         const eventDataDefaults = { name: "", isDevBed: true, data: {} }
-        this.system.registerEventData("devbed:ev", eventDataDefaults)
+        this.system.registerEventData(`${this.bedspace}:ev`, eventDataDefaults)
 
-        this.system.listenForEvent("devbed:ev", (ev: { data: { isDevBed: any; name: string | number; data: any; }; }) => {
-            if (!ev.data.isDevBed) return
+        this.system.listenForEvent(`${this.bedspace}:ev`, (ev: { data: { isDevBed: any; name: string | number; data: any; }; }) => {
+            if (!ev.data.isDevBed) throw new Error(`Conflict detected. Please ensure ${this.bedspace}:ev is not used by other scripts. If the issue persists, try changing your bedspace.`)
             this.callEach(this.callbacks[ev.data.name], ev.data.data)
         })
     }
@@ -152,7 +153,7 @@ export class DevBed {
     */
     private getId(): string {
         this.ids++
-        return `devbed_${this.ids}`
+        return `${this.bedspace}_${this.ids}`
     }
 
 
@@ -282,7 +283,7 @@ export class DevBed {
     * @param data The data to pass to the event handlers.
     */
     public bc(name: string, data: object = {}): void {
-        this.trigger("devbed:ev", { name, data })
+        this.trigger(`${this.bedspace}:ev`, { name, data })
     }
 
     /**
