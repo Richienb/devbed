@@ -87,6 +87,10 @@ interface BedComponent extends IComponent<any> {
     remove(ent: IEntity | BedEntity): boolean | null
 }
 
+interface extendData {
+    [key: string]: Function;
+}
+
 /**
 * A simplified implementation of the Minecraft Bedrock Scripting API.
 */
@@ -107,9 +111,14 @@ export class DevBed {
     private callbacks: any = {}
 
     /**
+    * The extended properties.
+    */
+    public ext: any = {}
+
+    /**
     * The API version targeted by DevBed.
     */
-    public readonly version = {
+    public static readonly version = {
         major: 0,
         minor: 0,
     }
@@ -119,7 +128,7 @@ export class DevBed {
     * @param bedspace The main DevBed namespace name to use.
     */
     constructor(o: IClient | IServer, public bedspace = "devbed") {
-        this.system = o.registerSystem(this.version.major, this.version.minor)
+        this.system = o.registerSystem(DevBed.version.minor, DevBed.version.major)
 
         this.system.initialize = (ev: any) => {
             this.callEach(this.callbacks.initialize, ev)
@@ -379,9 +388,7 @@ export class DevBed {
     * Extend DevBed functionality.
     * @param data The data to apply to DevBed. Specify names as keys and functions as values.
     */
-    public extend(data: object): void {
-        Object.entries(data).map(val => {
-            this[val[0]] = val[1]
-        })
+    public extend(data: extendData): void {
+        this.ext = {...this.ext, ...data}
     }
 }
