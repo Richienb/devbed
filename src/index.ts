@@ -370,4 +370,17 @@ export class DevBed {
         if (!data) return d
         return this.system.applyComponentChanges(this.system.level, id, this.parseTransform(d, data))
     }
+
+    /** *Utility Components*
+    *   ===================   */
+
+    /**
+    * Extend DevBed functionality.
+    * @param data The data to apply to DevBed. Specify names as keys and functions as values.
+    */
+    public extend(data: object): void {
+        Object.entries(data).map(val => {
+            this[val[0]] = val[1]
+        })
+    }
 }
