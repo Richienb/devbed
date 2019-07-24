@@ -87,10 +87,6 @@ interface BedComponent extends IComponent<any> {
     remove(ent: IEntity | BedEntity): boolean | null
 }
 
-interface extendData {
-    [key: string]: Function;
-}
-
 /**
 * A simplified implementation of the Minecraft Bedrock Scripting API.
 */
@@ -127,27 +123,26 @@ export class DevBed {
     * @param c The client or server object.
     * @param bedspace The main DevBed namespace name to use.
     */
-    constructor(o: IClient | IServer, public bedspace = "devbed") {
+    constructor(o: IClient | IServer, private bedspace = "devbed") {
         this.system = o.registerSystem(DevBed.version.minor, DevBed.version.major)
 
-        this.system.initialize = (ev: any) => {
+        this.system.initialize = (ev: IEventData<any>) => {
             this.callEach(this.callbacks.initialize, ev)
         }
 
-        this.system.update = (ev: any) => {
+        this.system.update = (ev: IEventData<any>) => {
             this.ticks++
             this.callEach(this.callbacks.update, ev)
         }
 
-        this.system.shutdown = (ev: any) => {
+        this.system.shutdown = (ev: IEventData<any>) => {
             this.callEach(this.callbacks.shutdown, ev)
         }
 
-        const eventDataDefaults = { name: "", isDevBed: true, data: {} }
-        this.system.registerEventData(`${this.bedspace}:ev`, eventDataDefaults)
+        this.system.registerEventData(`${this.bedspace}:ev`, { name: "", isDevBed: true, data: {} })
 
-        this.system.listenForEvent(`${this.bedspace}:ev`, (ev: { data: { isDevBed: any; name: string | number; data: any; }; }) => {
-            if (!ev.data.isDevBed) throw new Error(`Conflict detected. Please ensure ${this.bedspace}:ev is not used by other scripts. If the issue persists, try changing your bedspace.`)
+        this.system.listenForEvent(`${this.bedspace}:ev`, (ev: { data: { isDevBed: true; name: string; data: object; }; }) => {
+            if (ev.data.isDevBed !== true) throw new Error(`Conflict detected. Please ensure ${this.bedspace}:ev is not used by other scripts. If the issue persists, try changing your bedspace.`)
             this.callEach(this.callbacks[ev.data.name], ev.data.data)
         })
     }
@@ -165,17 +160,11 @@ export class DevBed {
         return `${this.bedspace}_${this.ids}`
     }
 
-
-    /** *Script Bindings*
-    *   =================   */
-
-    /** Entity Bindings
-    *   ===============   */
-
     /**
     * Create an entity.
     * @param entityType The type of entity to create.
     * @param identifier The template identifier of the enitity to create.
+    * @entity
     */
     public entity(entityType?: string, identifier?: string): BedEntity | null {
         const obj = entityType && identifier ? this.system.createEntity(entityType, identifier) : this.system.createEntity()
@@ -185,9 +174,6 @@ export class DevBed {
         }
         return obj
     }
-
-    /** Component Bindings
-    *   ==================   */
 
     /**
     * Parse the transformation of an array or object.
@@ -204,6 +190,7 @@ export class DevBed {
     * Create a component.
     * @param id The identifier of the component to create.
     * @param data The date to associate with the component.
+    * @component
     */
     public component(id: string = this.getId(), data: object): BedComponent | null {
         const obj = this.system.registerComponent(id, data)
@@ -225,13 +212,11 @@ export class DevBed {
         return obj
     }
 
-    /** Event Bindings
-    *   ==============   */
-
     /**
     * Call each callback in the array with the provided data.
     * @param arr The array of callbacks.
     * @param data The data to provide in the callback.
+    * @events
     */
     private callEach(arr: Function[], data?: any): void {
         if (Array.isArray(arr)) arr.map((cb: Function) => cb(data))
@@ -241,11 +226,12 @@ export class DevBed {
     * Listen for an event.
     * @param event The event identifier.
     * @param callback The callback to trigger.
+    * @events
     */
     public on(event: SendToMinecraftClient | SendToMinecraftServer, callback: Function): void {
-        event.split(" ").map((e) => {
-            if (!this.callbacks[e] && !["initialize", "update", "shutdown"].includes(e)) this.system.listenForEvent(e, (ev: any) => this.callEach(this.callbacks[e], ev))
-            this.callbacks[e].push(callback)
+        event.split(" ").map((ev) => {
+            if (!this.callbacks[ev] && !["initialize", "update", "shutdown"].includes(ev)) this.system.listenForEvent(ev, (e: IEventData<any>) => this.callEach(this.callbacks[ev], e))
+            this.callbacks[ev].push(callback)
         })
     }
 
@@ -253,11 +239,12 @@ export class DevBed {
     * Remove an event listener for an event.
     * @param event The event identifier.
     * @param callback The callback to remove.
+    * @events
     */
     public off(event: SendToMinecraftClient | SendToMinecraftServer, callback?: Function): void {
-        event.split(" ").map((e) => {
-            if (callback) this.callbacks[e] = this.callbacks[e].filter((val: Function) => val !== callback)
-            else this.callbacks[e] = []
+        event.split(" ").map((ev) => {
+            if (callback) this.callbacks[ev] = this.callbacks[ev].filter((val: Function) => val !== callback)
+            else this.callbacks[ev] = []
         })
     }
 
@@ -265,6 +252,8 @@ export class DevBed {
     * Listen for an event and trigger the callback once.
     * @param event The event identifier.
     * @param callback The callback to trigger.
+    * @events
+    * @shorthand
     */
     public once(event: SendToMinecraftClient | SendToMinecraftServer, callback: Function): void {
         const handleFire = (ev: any) => {
@@ -278,6 +267,7 @@ export class DevBed {
     * Trigger an event.
     * @param name The name of the event to post.
     * @param data The data to include in the event.
+    * @events
     */
     public trigger(name: string, data: object = {}) {
         const eventData = this.system.createEventData(name)
@@ -290,6 +280,7 @@ export class DevBed {
     * Broadcast a custom event.
     * @param message The message to post.
     * @param data The data to pass to the event handlers.
+    * @events
     */
     public bc(name: string, data: object = {}): void {
         this.trigger(`${this.bedspace}:ev`, { name, data })
@@ -298,6 +289,8 @@ export class DevBed {
     /**
     * Post a message in chat.
     * @param message The message to post.
+    * @events
+    * @shorthand
     */
     public chat(message: string): void {
         this.trigger("minecraft:display_chat_event", { message })
@@ -305,6 +298,8 @@ export class DevBed {
 
     /**
     * Configure the logging.
+    * @events
+    * @shorthand
     */
     public logconfig({
         info = false,
@@ -318,13 +313,11 @@ export class DevBed {
         })
     }
 
-    /** Entity Queries
-    *   ==============   */
-
     /**
     * Query for an object.
     * @param component The component to query.
     * @param fields The 3 query fields as an array of strings.
+    * @entity
     */
     public query(component: string, fields?: [string, string, string]): BedQuery | null {
         const obj = fields ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery(component)
@@ -337,13 +330,11 @@ export class DevBed {
         return obj
     }
 
-    /** Slash Commands
-    *   ==============   */
-
     /**
     * Execute a slash command.
     * @param command The command to execute.
     * @param callback The callback to invoke when the command returned data.
+    * @slash
     */
     public cmd(command: string, callback?: Function): void {
         if (!command.startsWith("/")) command = `/${command}`
@@ -352,28 +343,21 @@ export class DevBed {
         })
     }
 
-    /** Block Bindings
-    *   ==============   */
-
     /**
     * Get blocks from the world.
     * @param area The ticking area to use.
     * @param coords 3 coords specifying the location of a block or 6 for an area of blocks.
+    * @block
     */
     public block(area: ITickingArea, coords: [number, number, number] | [number, number, number, number, number, number]): IBlock {
         return coords.length === 3 ? this.system.getBlock(area, coords[0], coords[1], coords[2]) : this.system.getBlock(area, coords[0], coords[1], coords[2], coords[3], coords[4], coords[5])
     }
 
-    /** *Script Components*
-    *   =================   */
-
-    /** Entity Bindings
-    *   ===============   */
-
     /**
     * Get the data of a component stored in level.
     * @param id The id of the component.
     * @param data The data to set the component to.
+    * @entity
     */
     public level(id: string, data?: any[] | object | Function): ILevel {
         const d = this.system.getComponent(this.system.level, id)
@@ -381,14 +365,12 @@ export class DevBed {
         return this.system.applyComponentChanges(this.system.level, id, this.parseTransform(d, data))
     }
 
-    /** *Utility Components*
-    *   ===================   */
-
     /**
     * Extend DevBed functionality.
     * @param data The data to apply to DevBed. Specify names as keys and functions as values.
+    * @utility
     */
-    public extend(data: extendData): void {
-        this.ext = {...this.ext, ...data}
+    public extend(data: { [key: string]: Function }): void {
+        this.ext = { ...this.ext, ...data }
     }
 }
