@@ -120,11 +120,18 @@ export class DevBed {
     }
 
     /**
+    * The namespace name used by DevBed.
+    */
+    private readonly bedspace: string = "devbed"
+
+    /**
     * @param c The client or server object.
     * @param bedspace The main DevBed namespace name to use.
     */
-    constructor(o: IClient | IServer, private bedspace = "devbed") {
+    constructor(o: IClient | IServer, { bedspace = "devbed" } = {}) {
         this.system = o.registerSystem(DevBed.version.minor, DevBed.version.major)
+        
+        this.bedspace = bedspace
 
         this.system.initialize = (ev: IEventData<any>) => {
             this.callEach(this.callbacks.initialize, ev)
