@@ -130,7 +130,7 @@ export class DevBed {
     */
     constructor(o: IClient | IServer, { bedspace = "devbed" } = {}) {
         this.system = o.registerSystem(DevBed.version.minor, DevBed.version.major)
-        
+
         this.bedspace = bedspace
 
         this.system.initialize = (ev: IEventData<any>) => {
