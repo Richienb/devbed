@@ -338,7 +338,7 @@ export class DevBed {
     */
     public cmd(command: string, callback?: Function): void {
         if (!command.startsWith("/")) command = `/${command}`
-        this.system.executeCommand(command, ({ data }: any) => {
+        this.system.executeCommand(command, ({ data }: IExecuteCommandCallback) => {
             if (callback) callback(data)
         })
     }
@@ -363,6 +363,28 @@ export class DevBed {
         const d = this.system.getComponent(this.system.level, id)
         if (!data) return d
         return this.system.applyComponentChanges(this.system.level, id, this.parseTransform(d, data))
+    }
+
+    /**
+    * Check if a specific block has loaded.
+    * @param coords The coords of the block to check.
+    * @param callback The callback to fire after checking.
+    * @slash
+    * @shorthand
+    */
+    public blockLoaded(coords: [number, number, number], callback: Function): void {
+        this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} air`, ({ data }: { data: { message: string; statusCode: number; } }) => callback(data.message !== "Cannot test for block outside of the world"))
+    }
+
+    /**
+     * Check if a specific chunk has loaded.
+     * @param coords The coords of the chunk to check.
+     * @param callback The callback to fire after checking.
+     * @slash
+     * @shorthand
+    */
+    public chunkLoaded(coords: [number, number], callback: Function): void {
+        this.blockLoaded([coords[0] * 16, 0, coords[1] * 16], callback)
     }
 
     /**
