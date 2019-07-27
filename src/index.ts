@@ -1,89 +1,97 @@
 /**
- * @license
- *
- * MIT License
- *
- * Copyright (c) 2019 Richie Bendall
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the 'Software'), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
+* @license
+*
+* MIT License
+*
+* Copyright (c) 2019 Richie Bendall
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the 'Software'), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*/
 
 /// <reference types="minecraft-scripting-types-client" />
 /// <reference types="minecraft-scripting-types-server" />
 
+/**
+* Entity object.
+*/
 interface BedEntity extends IEntity {
     /**
-     * Destroy the entity object.
-     * */
+    * Destroy the entity object.
+    */
     remove: true | null,
 
     /**
-     * Check if the entity object is valid.
-     * */
+    * Check if the entity object is valid.
+    */
     isValid: boolean | null
 }
 
+/**
+* Query object.
+*/
 interface BedQuery extends IQuery {
     /**
-     * Add a filter to the query.
-     * @param identifier The identifier to use in the query.
-     * */
+    * Add a filter to the query.
+    * @param identifier The identifier to use in the query.
+    */
     filter(identifier: string): void,
 
     /**
-     * Get the entities that the query captured.
-     * @param cfields Filter the result by component fields.
-     * */
+    * Get the entities that the query captured.     * @param cfields Filter the result by component fields.
+    */
     entities(cfields?: [number, number, number, number, number, number]): any[] | null
 }
 
+/**
+* Component object.
+*/
 interface BedComponent extends IComponent<any> {
     /**
-     * Add the component to an entity.
-     * @param ident The identifier of the entity.
-     * @param existsOk If false an error will be thrown if the component already exists on the entity.
-     * */
+    * Add the component to an entity.
+    * @param ident The identifier of the entity.
+    * @param existsOk If false an error will be thrown if the component already exists on the entity.
+    */
     add(ent: IEntity | BedEntity, existsOk: boolean): boolean | null,
 
     /**
     * Check if an entity has a component.
     * @param ent The identifier of the entity.
-    * */
+    */
     has(ent: IEntity | BedEntity): boolean | null,
 
     /**
     * Check if an entity has a component.
     * @param ent The identifier of the entity.
     * @param data The data to change provided as an object or as a Function that takes and returns a value.
-    * */
+    */
     data(ent: IEntity | BedEntity, data: object | Function): IComponent<any> | boolean | null,
 
     /**
     * Reload the component.
     * @param ent The identifier of the entity.
-    * */
+    */
     reload(ent: IEntity | BedEntity): boolean | null,
 
     /**
     * Remove the component from an entity.
     * @param ent The identifier of the entity.
-    * */
+    */
     remove(ent: IEntity | BedEntity): boolean | null
 }
 
@@ -403,11 +411,11 @@ export class DevBed {
     }
 
     /**
-     * Check if a specific chunk has loaded.
-     * @param coords The coords of the chunk to check.
-     * @param callback The callback to fire after checking.
-     * @slash
-     * @shorthand
+    * Check if a specific chunk has loaded.
+    * @param coords The coords of the chunk to check.
+    * @param callback The callback to fire after checking.
+    * @slash
+    * @shorthand
     */
     public chunkLoaded(coords: [number, number], callback: Function): void {
         this.blockLoaded([coords[0] * 16, 0, coords[1] * 16], callback)
