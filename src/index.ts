@@ -188,7 +188,7 @@ export class DevBed {
     * @entity
     */
     public entity(identifier?: string): BedEntity | null {
-        return identifier ? this.createEntity("entity", identifier) : this.createEntity()
+        return this.createEntity("entity", identifier)
     }
 
 
@@ -198,7 +198,7 @@ export class DevBed {
     * @entity
     */
     public item(identifier?: string): BedEntity | null {
-        return identifier ? this.createEntity("item_entity", identifier) : this.createEntity()
+        return this.createEntity("item_entity", identifier)
     }
 
     /**
