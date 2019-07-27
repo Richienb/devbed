@@ -173,13 +173,32 @@ export class DevBed {
     * @param identifier The template identifier of the enitity to create.
     * @entity
     */
-    public entity(entityType?: string, identifier?: string): BedEntity | null {
+    private createEntity(entityType?: "entity" | "item_entity", identifier?: string): BedEntity | null {
         const obj = entityType && identifier ? this.system.createEntity(entityType, identifier) : this.system.createEntity()
         if (typeof obj === "object") {
             obj.remove = (): true | null => this.system.destroyEntity(obj)
             obj.isValid = (): boolean | null => this.system.isValidEntity(obj)
         }
         return obj
+    }
+
+    /**
+    * Create an entity.
+    * @param identifier The template identifier of the enitity to create.
+    * @entity
+    */
+    public entity(identifier?: string): BedEntity | null {
+        return identifier ? this.createEntity("entity", identifier) : this.createEntity()
+    }
+
+
+    /**
+    * Create an item.
+    * @param identifier The template identifier of the item to create.
+    * @entity
+    */
+    public item(identifier?: string): BedEntity | null {
+        return identifier ? this.createEntity("item_entity", identifier) : this.createEntity()
     }
 
     /**
