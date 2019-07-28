@@ -463,11 +463,11 @@ export class DevBed {
     }
 
     /**
-     * Check if a specific chunk has loaded.
-     * @param coords The coords of the chunk to check.
-     * @param callback The callback to fire after checking.
-     * @slash
-     * @shorthand
+    * Check if a specific chunk has loaded.
+    * @param coords The coords of the chunk to check.
+    * @param callback The callback to fire after checking.
+    * @slash
+    * @shorthand
     */
     public chunkLoaded(coords: [number, number], callback: Function): void {
         this.blockLoaded([coords[0] * 16, 0, coords[1] * 16], callback)
