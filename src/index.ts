@@ -1,89 +1,89 @@
 /**
- * @license
- *
- * MIT License
- *
- * Copyright (c) 2019 Richie Bendall
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the 'Software'), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
+* @license
+*
+* MIT License
+*
+* Copyright (c) 2019 Richie Bendall
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the 'Software'), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*/
 
 /// <reference types="minecraft-scripting-types-client" />
 /// <reference types="minecraft-scripting-types-server" />
 
 interface BedEntity extends IEntity {
     /**
-     * Destroy the entity object.
-     * */
+    * Destroy the entity object.
+    */
     remove: true | null,
 
     /**
-     * Check if the entity object is valid.
-     * */
+    * Check if the entity object is valid.
+    */
     isValid: boolean | null
 }
 
 interface BedQuery extends IQuery {
     /**
-     * Add a filter to the query.
-     * @param identifier The identifier to use in the query.
-     * */
+    * Add a filter to the query.
+    * @param identifier The identifier to use in the query.
+    */
     filter(identifier: string): void,
 
     /**
-     * Get the entities that the query captured.
-     * @param cfields Filter the result by component fields.
-     * */
-    entities(cfields?: [number, number, number, number, number, number]): any[] | null
+    * Get the entities that the query captured.
+    * @param cfields Filter the result by component fields.
+    */
+    search(cfields?: [number, number, number, number, number, number]): any[] | null
 }
 
 interface BedComponent extends IComponent<any> {
     /**
-     * Add the component to an entity.
-     * @param ident The identifier of the entity.
-     * @param existsOk If false an error will be thrown if the component already exists on the entity.
-     * */
+    * Add the component to an entity.
+    * @param ident The identifier of the entity.
+    * @param existsOk If false an error will be thrown if the component already exists on the entity.
+    */
     add(ent: IEntity | BedEntity, existsOk: boolean): boolean | null,
 
     /**
     * Check if an entity has a component.
     * @param ent The identifier of the entity.
-    * */
+    */
     has(ent: IEntity | BedEntity): boolean | null,
 
     /**
     * Check if an entity has a component.
     * @param ent The identifier of the entity.
     * @param data The data to change provided as an object or as a Function that takes and returns a value.
-    * */
-    data(ent: IEntity | BedEntity, data: object | Function): IComponent<any> | boolean | null,
+    */
+    data(ent: IEntity | BedEntity, data?: object | Function): IComponent<any> | boolean | null,
 
     /**
     * Reload the component.
     * @param ent The identifier of the entity.
-    * */
+    */
     reload(ent: IEntity | BedEntity): boolean | null,
 
     /**
     * Remove the component from an entity.
     * @param ent The identifier of the entity.
-    * */
+    */
     remove(ent: IEntity | BedEntity): boolean | null
 }
 
@@ -213,13 +213,12 @@ export class DevBed {
     }
 
     /**
-    * Create a component.
-    * @param id The identifier of the component to create.
-    * @param data The date to associate with the component.
+    * Transform IComponent to BedComponent.
+    * @param id The identifier of the component.
+    * @param obj The IComponent object.
     * @component
     */
-    public component(id: string = this.getId(), data: object): BedComponent | null {
-        const obj = this.system.registerComponent(id, data)
+    private transformComponent(id: string, obj: any): BedComponent | null {
         if (typeof obj === "object") {
             obj.add = (ent: IEntity | BedEntity, existsOk: boolean = true): boolean | null => {
                 if (!existsOk && obj.has(ent)) throw new TypeError("Component already exists!")
@@ -236,6 +235,33 @@ export class DevBed {
             obj.remove = (ent: IEntity | BedEntity): boolean | null => this.system.destroyComponent(ent, id)
         }
         return obj
+    }
+
+    /**
+    * Create a component.
+    * @param id The identifier of the component to create.
+    * @param data The date to associate with the component.
+    * @component
+    */
+    public component(id: string = this.getId(), data: object = {}): BedComponent | null {
+        const obj = this.system.registerComponent(id, data)
+        return this.transformComponent(id, obj)
+    }
+
+    /**
+    * Get the component of an entity.
+    * @param id The identifier of the component to create.
+    * @param ent The entity with the component.
+    * @component
+    */
+    public getComponent(id: string, ent: IEntity | BedEntity): BedComponent | null {
+        const obj = this.system.getComponent(ent, id);
+        const tobj = this.transformComponent(id, obj)
+        if (typeof tobj === "object" && tobj != null) {
+            const d = tobj.data
+            tobj.data = (data: object | Function): IComponent<any> | boolean | null => d(ent, data)
+        }
+        return tobj
     }
 
     /**
@@ -345,15 +371,21 @@ export class DevBed {
     * @param fields The 3 query fields as an array of strings.
     * @entity
     */
-    public query(component: string, fields?: [string, string, string]): BedQuery | null {
-        const obj = fields ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery(component)
+    public query(component?: string, fields: [string, string, string] = ["x", "y", "z"]): BedQuery | null {
+        const obj = component ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery()
         if (typeof obj === "object") {
             obj.filter = (identifier: string): void => this.system.addFilterToQuery(obj, identifier)
-            obj.entities = (cfields?: [number, number, number, number, number, number]): any[] | null => cfields ?
+            obj.search = (cfields?: [number, number, number, number, number, number]): any[] | null => cfields ?
                 this.system.getEntitiesFromQuery(obj, cfields[0], cfields[1], cfields[2], cfields[3], cfields[4], cfields[5]) :
                 this.system.getEntitiesFromQuery(obj)
         }
         return obj
+    }
+
+    public radius(entity: any, radius: any) {
+        const spacial_query = this.query("minecraft:position")
+        const comp = this.system.getComponent(entity, "minecraft:position").data
+        return this.system.getEntitiesFromQuery(spacial_query, comp.x - 10, comp.x + 10, comp.y - 10, comp.y + 10, comp.z - 10, comp.z + 10);
     }
 
     /**
@@ -385,10 +417,10 @@ export class DevBed {
     * @param data The data to set the component to.
     * @entity
     */
-    public level(id: string, data?: any[] | object | Function): ILevel {
-        const d = this.system.getComponent(this.system.level, id)
-        if (!data) return d
-        return this.system.applyComponentChanges(this.system.level, id, this.parseTransform(d, data))
+    public level(id: string, data?: any[] | object | Function): BedComponent | null | void {
+        const obj = this.getComponent(id, this.system.level)
+        if (!data) return obj
+        if (typeof obj === "object" && obj !== null) obj.data(this.parseTransform(obj, data))
     }
 
     /**
