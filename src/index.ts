@@ -275,7 +275,7 @@ export class DevBed {
     * @component
     */
     public getComponent(id: string, ent: IEntity | BedEntity): BedGetComponent | null {
-        const obj = this.system.getComponent(ent, id);
+        const obj = this.system.getComponent(ent, id)
         const tobj = this.transformComponent(id, obj)
         if (typeof tobj === "object" && tobj != null) {
             const d = tobj.data
@@ -409,9 +409,9 @@ export class DevBed {
     * @slash
     */
     public radius(id: string, radius: number): IEntity | null {
-        const spacial_query = this.query("minecraft:position")
+        const spacialQuery = this.query("minecraft:position")
         const comp = this.system.getComponent("minecraft:position", id).data
-        return !comp ? comp : this.system.getEntitiesFromQuery(spacial_query, comp.x - radius, comp.x + radius, comp.y - radius, comp.y + radius, comp.z - radius, comp.z + radius);
+        return !comp ? comp : this.system.getEntitiesFromQuery(spacialQuery, comp.x - radius, comp.x + radius, comp.y - radius, comp.y + radius, comp.z - radius, comp.z + radius)
     }
 
     /**
