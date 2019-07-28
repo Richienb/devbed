@@ -27,6 +27,9 @@
 /// <reference types="minecraft-scripting-types-client" />
 /// <reference types="minecraft-scripting-types-server" />
 
+/**
+* Entity object.
+*/
 interface BedEntity extends IEntity {
     /**
     * Destroy the entity object.
@@ -39,6 +42,9 @@ interface BedEntity extends IEntity {
     isValid: boolean | null
 }
 
+/**
+* Query object.
+*/
 interface BedQuery extends IQuery {
     /**
     * Add a filter to the query.
@@ -53,6 +59,9 @@ interface BedQuery extends IQuery {
     search(cfields?: [number, number, number, number, number, number]): any[] | null
 }
 
+/**
+* Component object.
+*/
 interface BedComponent extends IComponent<any> {
     /**
     * Add the component to an entity.
@@ -68,7 +77,7 @@ interface BedComponent extends IComponent<any> {
     has(ent: IEntity | BedEntity): boolean | null,
 
     /**
-    * Check if an entity has a component.
+    * Get or set the data of an entity.
     * @param ent The identifier of the entity.
     * @param data The data to change provided as an object or as a Function that takes and returns a value.
     */
@@ -85,6 +94,17 @@ interface BedComponent extends IComponent<any> {
     * @param ent The identifier of the entity.
     */
     remove(ent: IEntity | BedEntity): boolean | null
+}
+
+/**
+* Component object from getComponent.
+*/
+interface BedGetComponent extends BedComponent {
+    /**
+    * Get or set the data of an entity.
+    * @param data The data to change provided as an object or as a Function that takes and returns a value.
+    */
+    data(data: object | Function): IComponent<any> | boolean | null
 }
 
 /**
@@ -254,7 +274,7 @@ export class DevBed {
     * @param ent The entity with the component.
     * @component
     */
-    public getComponent(id: string, ent: IEntity | BedEntity): BedComponent | null {
+    public getComponent(id: string, ent: IEntity | BedEntity): BedGetComponent | null {
         const obj = this.system.getComponent(ent, id);
         const tobj = this.transformComponent(id, obj)
         if (typeof tobj === "object" && tobj != null) {
@@ -382,10 +402,16 @@ export class DevBed {
         return obj
     }
 
-    public radius(entity: any, radius: any) {
+    /**
+    * Get the entities within a specific radius of an entity.
+    * @param id The id of the center entity.
+    * @param radius The radius to search.
+    * @slash
+    */
+    public radius(id: string, radius: number): IEntity | null {
         const spacial_query = this.query("minecraft:position")
-        const comp = this.system.getComponent(entity, "minecraft:position").data
-        return this.system.getEntitiesFromQuery(spacial_query, comp.x - 10, comp.x + 10, comp.y - 10, comp.y + 10, comp.z - 10, comp.z + 10);
+        const comp = this.system.getComponent("minecraft:position", id).data
+        return !comp ? comp : this.system.getEntitiesFromQuery(spacial_query, comp.x - radius, comp.x + radius, comp.y - radius, comp.y + radius, comp.z - radius, comp.z + radius);
     }
 
     /**
@@ -416,11 +442,13 @@ export class DevBed {
     * @param id The id of the component.
     * @param data The data to set the component to.
     * @entity
+    * @shorthand
     */
     public level(id: string, data?: any[] | object | Function): BedComponent | null | void {
         const obj = this.getComponent(id, this.system.level)
         if (!data) return obj
-        if (typeof obj === "object" && obj !== null) obj.data(this.parseTransform(obj, data))
+        if (typeof obj === "object" && obj !== null) obj.data(data)
+        return null
     }
 
     /**
