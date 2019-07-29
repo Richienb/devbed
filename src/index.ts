@@ -195,7 +195,7 @@ export class DevBed {
     */
     private parseType(format: "entity" | "id", val: IEntity | BedEntity | number): BedEntity | number {
         if (format === "id") return typeof val === "number" ? val : val.id
-        else return typeof val === "number" ? this.system.getEntitiesFromQuery(val) : val // if (format === "entity") 
+        else return typeof val === "number" ? this.system.getEntitiesFromQuery(val) : val // if (format === "entity")
     }
 
     /**
@@ -497,7 +497,7 @@ export class DevBed {
     * @shorthand
     */
     public rules(rules: object | string, data: boolean | number | string): void | void[] {
-        if (typeof rules === "object") return Object.entries(rules).map(val => this.cmd(`gamerule ${val[0]} ${val[1]}`))
+        if (typeof rules === "object") return Object.entries(rules).map((val) => this.cmd(`gamerule ${val[0]} ${val[1]}`))
         return this.cmd(`gamerule ${rules} ${data}`)
     }
 
