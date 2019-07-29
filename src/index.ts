@@ -490,6 +490,48 @@ export class DevBed {
     }
 
     /**
+    * Set gamerules.
+    * @param rules The rules or rule to set or get.
+    * @param data The data to set if a single rule was provided.
+    * @slash
+    * @shorthand
+    */
+    public rules(rules: object | string, data: boolean | number | string): void | void[] {
+        if (typeof rules === "object") return Object.entries(rules).map(val => this.cmd(`gamerule ${val[0]} ${val[1]}`))
+        return this.cmd(`gamerule ${rules} ${data}`)
+    }
+
+    /**
+    * Give or take potion effects from players.
+    * @param sel The player selectors or usernames to apply the effect to.
+    * @param eff The effect type.
+    * @param seconds The seconds the effect will be active.
+    * @param amplifier The amplifier amount.
+    * @param particles Whether or not to show the particles.
+    * @slash
+    */
+    public effect(sel: string | string[], eff?: string, seconds: number = 30, amplifier = 0, particles = true): void {
+        if (Array.isArray(sel)) sel = sel.join(" ")
+        if (!eff) return this.cmd(`effect ${sel} clear`)
+        this.cmd(`effect ${sel} ${seconds} ${amplifier} ${!particles}`)
+    }
+
+    /**
+    * Locate a structure.
+    * @param name The structure to locate.
+    * @param callback The function to invoke with the results.
+    * @slash
+    * @shorthand
+    */
+    public locate(name: string, callback: Function): void {
+        this.cmd(`locate ${name}`, ({ data }: { data: { message: string; statusCode: number; } }) => {
+            const m = data.message.match(/The nearest .+ is at block (.+), \(y\?\), (.+)/)
+            if (!m) callback([undefined, undefined])
+            else callback([m[0], m[1]])
+        })
+    }
+
+    /**
     * Check if a specific chunk has loaded.
     * @param coords The coords of the chunk to check.
     * @param callback The callback to fire after checking.
