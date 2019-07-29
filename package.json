@@ -19,7 +19,7 @@
         "microbundle": "^0.11.0",
         "minecraft-scripting-types-client": "^1.0.0",
         "minecraft-scripting-types-server": "^1.0.0",
-        "typedoc": "^0.14.2",
+        "typedoc": "^0.15.0",
         "typescript": "^3.5.3"
     },
     "dependencies": {},
@@ -27,8 +27,7 @@
         "minecraft-addon-toolchain": "^1.0.3"
     },
     "resolutions": {
-        "microbundle/rollup-plugin-postcss/cssnano/postcss-svgo/svgo/js-yaml": "^3.13.0",
-        "typedoc/marked": "^0.6.2",
-        "microbundle/rollup-plugin-typescript2/rollup-pluginutils/micromatch/braces": "^2.3.1"
+        "microbundle/rollup-plugin-typescript2/rollup-pluginutils/micromatch/braces": "^2.3.1",
+        "microbundle/rollup-plugin-postcss/cssnano/postcss-svgo/svgo/js-yaml": "^3.13.0"
     }
 }

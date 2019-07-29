@@ -188,6 +188,17 @@ export class DevBed {
     }
 
     /**
+    * Convert entity to id and entity to id.
+    * @param format The format to convert to.
+    * @param val The value to convert.
+    * @entity
+    */
+    private parseType(format: "entity" | "id", val: IEntity | BedEntity | number): BedEntity | number {
+        if (format === "id") return typeof val === "number" ? val : val.id
+        else return typeof val === "number" ? this.system.getEntitiesFromQuery(val) : val // if (format === "entity") 
+    }
+
+    /**
     * Create an entity.
     * @param entityType The type of entity to create.
     * @param identifier The template identifier of the enitity to create.
@@ -240,19 +251,35 @@ export class DevBed {
     */
     private transformComponent(id: string, obj: any): BedComponent | null {
         if (typeof obj === "object") {
-            obj.add = (ent: IEntity | BedEntity, existsOk: boolean = true): boolean | null => {
+            obj.add = (ent: IEntity | BedEntity | number, existsOk: boolean = true): boolean | null => {
+                ent = this.parseType("entity", ent)
+
                 if (!existsOk && obj.has(ent)) throw new TypeError("Component already exists!")
                 return this.system.createComponent(id, ent)
             }
-            obj.has = (ent: IEntity | BedEntity): boolean | null => this.system.hasComponent(ent, id)
-            obj.data = (ent: IEntity | BedEntity, data?: object | Function): IComponent<any> | boolean | null => {
+            obj.has = (ent: IEntity | BedEntity | number): boolean | null => {
+                ent = this.parseType("entity", ent)
+
+                return this.system.hasComponent(ent, id)
+            }
+            obj.data = (ent: IEntity | BedEntity | number, data?: object | Function): IComponent<any> | boolean | null => {
+                ent = this.parseType("entity", ent)
+
                 const curr = this.system.getComponent(ent, id)
                 if (!data) return curr
 
                 return this.system.applyComponentChanges(ent, this.parseTransform(curr, data))
             }
-            obj.reload = (ent: IEntity | BedEntity): boolean | null => this.system.applyComponentChanges(ent, id)
-            obj.remove = (ent: IEntity | BedEntity): boolean | null => this.system.destroyComponent(ent, id)
+            obj.reload = (ent: IEntity | BedEntity | number): boolean | null => {
+                ent = this.parseType("entity", ent)
+
+                return this.system.applyComponentChanges(ent, id)
+            }
+            obj.remove = (ent: IEntity | BedEntity | number): boolean | null => {
+                ent = this.parseType("entity", ent)
+
+                return this.system.destroyComponent(ent, id)
+            }
         }
         return obj
     }
