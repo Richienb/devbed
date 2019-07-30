@@ -462,8 +462,9 @@ export class DevBed {
     * @param callback The callback to invoke when the command returned data.
     * @slash
     */
-    public cmd(command: string, callback?: Function): Promise<object> | void {
+    public cmd(command: string | string[], callback?: Function): Promise<object> | void {
         return this.maybe(callback, new Promise((resolve) => {
+            if (Array.isArray(command)) command = command.join(" ")
             if (!command.startsWith("/")) command = `/${command}`
             this.system.executeCommand(command, ({ data }: IExecuteCommandCallback) => resolve(data))
         }))
@@ -556,12 +557,12 @@ export class DevBed {
     * @slash
     * @shorthand
     */
-    public locate(name: string, callback?: Function): Promise<[string, string] | [undefined, undefined]> | void {
+    public locate(name: string, callback?: Function): Promise<[number, number] | [undefined, undefined]> | void {
         return this.maybe(callback, new Promise((resolve) =>
             this.cmd(`locate ${name}`, ({ data }: { data: { message: string; statusCode: number; } }) => {
                 const m = data.message.match(/The nearest .+ is at block (.+), \(y\?\), (.+)/)
                 if (!m) resolve([undefined, undefined])
-                else resolve([m[0], m[1]])
+                else resolve([+m[0], +m[1]])
             })
         ))
     }
@@ -576,6 +577,41 @@ export class DevBed {
     public chunkLoaded(coords: [number, number], callback?: Function): Promise<boolean> | void {
         return this.maybe(callback, new Promise((resolve) => this.blockLoaded([coords[0] * 16, 0, coords[1] * 16], resolve)))
     }
+
+    /**
+    * Teleport players.
+    * @param sel The player selectors or usernames to teleport.
+    * @param dest The destination to teleport to.
+    * @param facing The y and x rotation values, coordinates or entity selector
+    * @slash
+    * @shorthand
+    * @beta
+    */
+    public teleport(sel: string | string[], dest: string | [number, number, number], facing?: [number, number] | [number, number, number] | string): void {
+        // TODO: Use best location calculation
+        if (!Array.isArray(sel)) sel = [sel]
+        if (facing) {
+            if (typeof facing === "string") facing = `facing ${facing}`
+            else if (facing.length === 2) facing = facing.join(" ")
+            else facing = `facing ${facing.join(" ")}`
+        }
+        if (Array.isArray(dest)) dest = dest.join(" ")
+        sel.map((val) => this.cmd(`tp ${val} ${dest}`))
+    }
+
+    /**
+    * Teleport players.
+    * @param sel The player selectors or usernames to teleport.
+    * @param dest The destination to teleport to.
+    * @param facing The y and x rotation values, coordinates or entity selector
+    * @slash
+    * @shorthand
+    * @beta
+    */
+    public tp(sel: string | string[], dest: string | [number, number, number], facing?: [number, number] | [number, number, number] | string): void {
+        this.teleport(sel, dest, facing)
+    }
+
 
     /**
     * Extend DevBed functionality.
