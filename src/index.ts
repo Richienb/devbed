@@ -574,7 +574,7 @@ export class DevBed {
     * @shorthand
     */
     public chunkLoaded(coords: [number, number], callback?: Function): Promise<boolean> | void {
-        return this.maybe(callback, new Promise((resolve) => this.blockLoaded([coords[0] * 16, 0, coords[1] * 16]).then(resolve)))
+        return this.maybe(callback, new Promise((resolve) => this.blockLoaded([coords[0] * 16, 0, coords[1] * 16], resolve)))
     }
 
     /**
