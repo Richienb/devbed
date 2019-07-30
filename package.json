@@ -22,7 +22,6 @@
         "typedoc": "^0.15.0",
         "typescript": "^3.5.3"
     },
-    "dependencies": {},
     "peerDependencies": {
         "minecraft-addon-toolchain": "^1.0.3"
     },
