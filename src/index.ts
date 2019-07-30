@@ -505,6 +505,24 @@ export class DevBed {
     }
 
     /**
+    * Get the id of the block at specific coordinates.
+    * @param coords The coords of the block to check.
+    * @param callback The callback to fire after checking.
+    * @slash
+    * @beta
+    */
+    public blockAt(coords: [number, number, number], callback?: Function): Promise<string> | void {
+        return this.maybe(callback, new Promise((resolve) => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} air`, ({ data }: { data: { message: string; statusCode: number; } }) => {
+            if (data.message.match(/Successfully found the block at .+\./)) resolve("Air")
+            else {
+                const m = data.message.match(/The block at .+ is Air \(expected: (.+)\)\./)
+                if (m) resolve(m[1])
+                else resolve(undefined) // TODO: Force load block to check then unload.
+            }
+        })))
+    }
+
+    /**
     * Set gamerules.
     * @param rules The rules or rule to set or get.
     * @param data The data to set if a single rule was provided.
