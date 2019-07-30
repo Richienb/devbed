@@ -188,6 +188,19 @@ export class DevBed {
     }
 
     /**
+    * Convert a promise to a callback function when needed.
+    * @param cb The callback to check.
+    * @param promise The promise to integrate into the callback.
+    */
+    private maybe(cb: Function | void, promise: Promise<any>): Promise<any> | void {
+        if (!cb) return promise
+        promise
+            .then((val) => cb(val))
+            .catch((err) => {throw err})
+        return undefined
+    }
+
+    /**
     * Convert entity to id and entity to id.
     * @param format The format to convert to.
     * @param val The value to convert.
@@ -354,12 +367,14 @@ export class DevBed {
     * @events
     * @shorthand
     */
-    public once(event: SendToMinecraftClient | SendToMinecraftServer, callback: Function): void {
-        const handleFire = (ev: any) => {
-            this.off(event, handleFire)
-            callback(ev)
-        }
-        this.on(event, handleFire)
+    public once(event: SendToMinecraftClient | SendToMinecraftServer, callback?: Function): Promise<any> | void {
+        return this.maybe(callback, new Promise((resolve) => {
+            const handleFire = (ev: any) => {
+                this.off(event, handleFire)
+                resolve(ev)
+            }
+            this.on(event, handleFire)
+        }))
     }
 
     /**
@@ -447,11 +462,11 @@ export class DevBed {
     * @param callback The callback to invoke when the command returned data.
     * @slash
     */
-    public cmd(command: string, callback?: Function): void {
-        if (!command.startsWith("/")) command = `/${command}`
-        this.system.executeCommand(command, ({ data }: IExecuteCommandCallback) => {
-            if (callback) callback(data)
-        })
+    public cmd(command: string, callback?: Function): Promise<object> | void {
+        return this.maybe(callback, new Promise((resolve) => {
+            if (!command.startsWith("/")) command = `/${command}`
+            this.system.executeCommand(command, ({ data }: IExecuteCommandCallback) => resolve(data))
+        }))
     }
 
     /**
@@ -485,8 +500,8 @@ export class DevBed {
     * @slash
     * @shorthand
     */
-    public blockLoaded(coords: [number, number, number], callback: Function): void {
-        this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} air`, ({ data }: { data: { message: string; statusCode: number; } }) => callback(data.message !== "Cannot test for block outside of the world"))
+    public blockLoaded(coords: [number, number, number], callback?: Function): Promise<boolean> | void {
+        return this.maybe(callback, new Promise((resolve) => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} air`, ({ data }: { data: { message: string; statusCode: number; } }) => resolve(data.message !== "Cannot test for block outside of the world"))))
     }
 
     /**
@@ -496,9 +511,9 @@ export class DevBed {
     * @slash
     * @shorthand
     */
-    public rules(rules: object | string, data: boolean | number | string): void | void[] {
-        if (typeof rules === "object") return Object.entries(rules).map((val) => this.cmd(`gamerule ${val[0]} ${val[1]}`))
-        return this.cmd(`gamerule ${rules} ${data}`)
+    public rules(rules: object | string, data: boolean | number | string): void {
+        if (typeof rules === "object") return void Object.entries(rules).map((val) => this.cmd(`gamerule ${val[0]} ${val[1]}`))
+        return void this.cmd(`gamerule ${rules} ${data}`)
     }
 
     /**
@@ -512,7 +527,7 @@ export class DevBed {
     */
     public effect(sel: string | string[], eff?: string, seconds: number = 30, amplifier = 0, particles = true): void {
         if (Array.isArray(sel)) sel = sel.join(" ")
-        if (!eff) return this.cmd(`effect ${sel} clear`)
+        if (!eff) return void this.cmd(`effect ${sel} clear`)
         this.cmd(`effect ${sel} ${seconds} ${amplifier} ${!particles}`)
     }
 
@@ -523,12 +538,14 @@ export class DevBed {
     * @slash
     * @shorthand
     */
-    public locate(name: string, callback: Function): void {
-        this.cmd(`locate ${name}`, ({ data }: { data: { message: string; statusCode: number; } }) => {
-            const m = data.message.match(/The nearest .+ is at block (.+), \(y\?\), (.+)/)
-            if (!m) callback([undefined, undefined])
-            else callback([m[0], m[1]])
-        })
+    public locate(name: string, callback?: Function): Promise<[string, string] | [undefined, undefined]> | void {
+        return this.maybe(callback, new Promise((resolve) =>
+            this.cmd(`locate ${name}`, ({ data }: { data: { message: string; statusCode: number; } }) => {
+                const m = data.message.match(/The nearest .+ is at block (.+), \(y\?\), (.+)/)
+                if (!m) resolve([undefined, undefined])
+                else resolve([m[0], m[1]])
+            })
+        ))
     }
 
     /**
@@ -538,8 +555,8 @@ export class DevBed {
     * @slash
     * @shorthand
     */
-    public chunkLoaded(coords: [number, number], callback: Function): void {
-        this.blockLoaded([coords[0] * 16, 0, coords[1] * 16], callback)
+    public chunkLoaded(coords: [number, number], callback?: Function): Promise<boolean> | void {
+        return this.maybe(callback, new Promise((resolve) => this.blockLoaded([coords[0] * 16, 0, coords[1] * 16]).then(resolve)))
     }
 
     /**
