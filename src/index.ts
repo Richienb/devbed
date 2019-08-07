@@ -34,12 +34,12 @@ interface BedEntity extends IEntity {
     /**
     * Destroy the entity object.
     */
-    remove: true | null,
+    remove: void,
 
     /**
     * Check if the entity object is valid.
     */
-    isValid: boolean | null
+    isValid: boolean
 }
 
 /**
@@ -68,32 +68,32 @@ interface BedComponent extends IComponent<any> {
     * @param ident The identifier of the entity.
     * @param existsOk If false an error will be thrown if the component already exists on the entity.
     */
-    add(ent: IEntity | BedEntity, existsOk: boolean): boolean | null,
+    add(ent: IEntity | BedEntity, existsOk: boolean): void,
 
     /**
     * Check if an entity has a component.
     * @param ent The identifier of the entity.
     */
-    has(ent: IEntity | BedEntity): boolean | null,
+    has(ent: IEntity | BedEntity): boolean,
 
     /**
     * Get or set the data of an entity.
     * @param ent The identifier of the entity.
     * @param data The data to change provided as an object or as a Function that takes and returns a value.
     */
-    data(ent: IEntity | BedEntity, data?: object | Function): IComponent<any> | boolean | null,
+    data(ent: IEntity | BedEntity, data?: object | Function): IComponent<any> | void,
 
     /**
     * Reload the component.
     * @param ent The identifier of the entity.
     */
-    reload(ent: IEntity | BedEntity): boolean | null,
+    reload(ent: IEntity | BedEntity): void,
 
     /**
     * Remove the component from an entity.
     * @param ent The identifier of the entity.
     */
-    remove(ent: IEntity | BedEntity): boolean | null
+    remove(ent: IEntity | BedEntity): void
 }
 
 /**
@@ -104,7 +104,7 @@ interface BedGetComponent extends BedComponent {
     * Get or set the data of an entity.
     * @param data The data to change provided as an object or as a Function that takes and returns a value.
     */
-    data(data: object | Function): IComponent<any> | boolean | null
+    data(data: object | Function): IComponent<any> | void
 }
 
 /**
@@ -220,8 +220,8 @@ export class DevBed {
     private createEntity(entityType?: "entity" | "item_entity", identifier?: string): BedEntity | null {
         const obj = entityType && identifier ? this.system.createEntity(entityType, identifier) : this.system.createEntity()
         if (typeof obj === "object") {
-            obj.remove = (): true | null => this.system.destroyEntity(obj)
-            obj.isValid = (): boolean | null => this.system.isValidEntity(obj)
+            obj.remove = (): void => void this.system.destroyEntity(obj)
+            obj.isValid = (): boolean => Boolean(this.system.isValidEntity(obj))
         }
         return obj
     }
@@ -264,34 +264,34 @@ export class DevBed {
     */
     private transformComponent(id: string, obj: any): BedComponent | null {
         if (typeof obj === "object") {
-            obj.add = (ent: IEntity | BedEntity | number, existsOk: boolean = true): boolean | null => {
+            obj.add = (ent: IEntity | BedEntity | number, existsOk: boolean = true): void => {
                 ent = this.parseType("entity", ent)
 
                 if (!existsOk && obj.has(ent)) throw new TypeError("Component already exists!")
-                return this.system.createComponent(id, ent)
+                return void this.system.createComponent(id, ent)
             }
-            obj.has = (ent: IEntity | BedEntity | number): boolean | null => {
+            obj.has = (ent: IEntity | BedEntity | number): boolean => {
                 ent = this.parseType("entity", ent)
 
-                return this.system.hasComponent(ent, id)
+                return Boolean(this.system.hasComponent(ent, id))
             }
-            obj.data = (ent: IEntity | BedEntity | number, data?: object | Function): IComponent<any> | boolean | null => {
+            obj.data = (ent: IEntity | BedEntity | number, data?: object | Function): IComponent<any> | void => {
                 ent = this.parseType("entity", ent)
 
                 const curr = this.system.getComponent(ent, id)
                 if (!data) return curr
 
-                return this.system.applyComponentChanges(ent, this.parseTransform(curr, data))
+                return void this.system.applyComponentChanges(ent, this.parseTransform(curr, data))
             }
-            obj.reload = (ent: IEntity | BedEntity | number): boolean | null => {
+            obj.reload = (ent: IEntity | BedEntity | number): void => {
                 ent = this.parseType("entity", ent)
 
-                return this.system.applyComponentChanges(ent, id)
+                return void this.system.applyComponentChanges(ent, id)
             }
-            obj.remove = (ent: IEntity | BedEntity | number): boolean | null => {
+            obj.remove = (ent: IEntity | BedEntity | number): void => {
                 ent = this.parseType("entity", ent)
 
-                return this.system.destroyComponent(ent, id)
+                return void this.system.destroyComponent(ent, id)
             }
         }
         return obj
@@ -299,11 +299,11 @@ export class DevBed {
 
     /**
     * Create a component.
-    * @param id The identifier of the component to create.
-    * @param data The date to associate with the component.
+    * @param data The data to associate with the component.
     * @component
     */
-    public component(id: string = this.getId(), data: object = {}): BedComponent | null {
+    public component(data: object = {}): BedComponent | null {
+        const id = this.getId()
         const obj = this.system.registerComponent(id, data)
         return this.transformComponent(id, obj)
     }
@@ -315,13 +315,12 @@ export class DevBed {
     * @component
     */
     public getComponent(id: string, ent: IEntity | BedEntity): BedGetComponent | null {
-        const obj = this.system.getComponent(ent, id)
-        const tobj = this.transformComponent(id, obj)
-        if (typeof tobj === "object" && tobj != null) {
-            const d = tobj.data
-            tobj.data = (data: object | Function): IComponent<any> | boolean | null => d(ent, data)
+        const obj = this.transformComponent(id, this.system.getComponent(ent, id))
+        if (typeof obj === "object" && obj != null) {
+            const newData = obj.data
+            obj.data = (data: object | Function): IComponent<any> | void => newData(ent, data)
         }
-        return tobj
+        return obj
     }
 
     /**
