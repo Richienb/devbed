@@ -6,6 +6,7 @@
     "author": "Richie Bendall <richiebendall@gmail.com>",
     "license": "MIT",
     "scripts": {
+        "dev": "microbundle --target node --watch",
         "build": "yarn build:js && yarn build:docs",
         "build:js": "microbundle --target node",
         "build:docs": "typedoc --out ./docs --mode file ./src",
@@ -21,9 +22,6 @@
         "minecraft-scripting-types-server": "^1.0.0",
         "typedoc": "^0.15.0",
         "typescript": "^3.5.3"
-    },
-    "peerDependencies": {
-        "minecraft-addon-toolchain": "^1.0.3"
     },
     "resolutions": {
         "microbundle/rollup-plugin-typescript2/rollup-pluginutils/micromatch/braces": "^2.3.1",

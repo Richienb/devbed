@@ -117,6 +117,11 @@ export class DevBed {
     public system: any
 
     /**
+    * The type of object the system is.
+    */
+    private readonly systemType: "client" | "server"
+
+    /**
     * The total ticks that have passed since the script started.
     */
     public ticks = 0
@@ -150,6 +155,7 @@ export class DevBed {
     */
     constructor(o: IClient | IServer, { bedspace = "devbed" } = {}) {
         this.system = o.registerSystem(DevBed.version.minor, DevBed.version.major)
+        this.systemType = this.system.level ? "server" : "client"
 
         this.bedspace = bedspace
 
@@ -166,12 +172,14 @@ export class DevBed {
             this.callEach(this.callbacks.shutdown, ev)
         }
 
-        this.system.registerEventData(`${this.bedspace}:ev`, { name: "", isDevBed: true, data: {} })
+        this.system.registerEventData(`${this.bedspace}:ev`, { name: "", isDevBed: false, data: {} })
 
-        this.system.listenForEvent(`${this.bedspace}:ev`, (ev: { data: { isDevBed: true; name: string; data: object; }; }) => {
-            if (ev.data.isDevBed !== true) throw new Error(`Conflict detected. Please ensure ${this.bedspace}:ev is not used by other scripts. If the issue persists, try changing your bedspace.`)
-            this.callEach(this.callbacks[ev.data.name], ev.data.data)
+        this.system.listenForEvent(`${this.bedspace}:ev`, ({ data }: { data: { isDevBed: boolean; name: string; data: object; }; }) => {
+            if (data.isDevBed !== true) throw new Error(`Conflict detected. Please ensure ${this.bedspace}:ev is not used by other scripts. If the issue persists, try changing your bedspace.`)
+            this.callEach(this.callbacks[data.name], data.data)
         })
+
+        this.system.registerEventData(`${this.bedspace}:blank`, {})
     }
 
     /**
@@ -334,14 +342,27 @@ export class DevBed {
     }
 
     /**
+    * Setup namespaced event to be listened for.
+    * @param event The event identifier.
+    * @param defaultData The callback to trigger.
+    * @events
+    */
+    public newEvent(event: string, defaultData: object) {
+        this.system.registerEventData(event, defaultData)
+    }
+
+    /**
     * Listen for an event.
     * @param event The event identifier.
     * @param callback The callback to trigger.
     * @events
     */
-    public on(event: SendToMinecraftClient | SendToMinecraftServer, callback: Function): void {
+    public on(event: SendToMinecraftClient | SendToMinecraftServer | string, callback: Function): void {
         event.split(" ").map((ev) => {
-            if (!this.callbacks[ev] && !["initialize", "update", "shutdown"].includes(ev)) this.system.listenForEvent(ev, (e: IEventData<any>) => this.callEach(this.callbacks[ev], e))
+            if (!this.callbacks[ev]) {
+                if (ev.includes(":")) this.system.listenForEvent(ev, (e: IEventData<any>) => this.callEach(this.callbacks[ev], e))
+                this.callbacks[ev] = []
+            }
             this.callbacks[ev].push(callback)
         })
     }
@@ -352,7 +373,7 @@ export class DevBed {
     * @param callback The callback to remove.
     * @events
     */
-    public off(event: SendToMinecraftClient | SendToMinecraftServer, callback?: Function): void {
+    public off(event: SendToMinecraftClient | SendToMinecraftServer | string, callback?: Function): void {
         event.split(" ").map((ev) => {
             if (callback) this.callbacks[ev] = this.callbacks[ev].filter((val: Function) => val !== callback)
             else this.callbacks[ev] = []
@@ -366,7 +387,7 @@ export class DevBed {
     * @events
     * @shorthand
     */
-    public once(event: SendToMinecraftClient | SendToMinecraftServer, callback?: Function): Promise<any> | void {
+    public once(event: SendToMinecraftClient | SendToMinecraftServer | string, callback?: Function): Promise<any> | void {
         return this.maybe(callback, new Promise((resolve) => {
             const handleFire = (ev: any) => {
                 this.off(event, handleFire)
@@ -383,8 +404,14 @@ export class DevBed {
     * @events
     */
     public trigger(name: string, data: object = {}) {
-        const eventData = this.system.createEventData(name)
-        eventData.data = { ...eventData.data, ...data }
+        const isInternalEvent = !name.includes(":")
+
+        let eventData = this.system.createEventData(isInternalEvent ? `${this.bedspace}:ev` : name)
+
+        if (!eventData) eventData = this.system.createEventData(`${this.bedspace}:blank`)
+
+        if (isInternalEvent) eventData.data = { ...eventData.data, name, data, isDevBed: true }
+        else eventData.data = { ...eventData.data, ...data }
 
         this.system.broadcastEvent(name, eventData)
     }
@@ -405,7 +432,9 @@ export class DevBed {
     * @events
     * @shorthand
     */
-    public chat(message: string): void {
+    public chat(message: string | object | boolean | number): void {
+        if (typeof message === "object") message = JSON.stringify(message)
+        else if (typeof message === "number" || typeof message === "boolean") message = message.toString()
         this.trigger("minecraft:display_chat_event", { message })
     }
 
@@ -464,7 +493,6 @@ export class DevBed {
     public cmd(command: string | string[], callback?: Function): Promise<object> | void {
         return this.maybe(callback, new Promise((resolve) => {
             if (Array.isArray(command)) command = command.join(" ")
-            if (!command.startsWith("/")) command = `/${command}`
             this.system.executeCommand(command, ({ data }: IExecuteCommandCallback) => resolve(data))
         }))
     }
