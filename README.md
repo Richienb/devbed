@@ -8,74 +8,60 @@ A simplified implementation of the Minecraft Bedrock Scripting API. For more inf
 
 ### With DevBed
 
-```ts
-import * as DevBed from "devbed"
+```js
+import { DevBed } from "devbed"
 
-namespace Client {
-    const bed = new DevBed(client)
+const bed = new DevBed(client)
 
-    bed.on("initialize", () => {
-        bed.logconfig({
-            info: true,
-            warn: true,
-            error: true
-        })
+bed.on("initialize", () => {
+    bed.logconfig({
+        error: true,
+        warn: true,
+        info: true
     })
+})
 
-    bed.on("update", () => {
-        if (bed.ticks === 1) {
-            bed.chat("What are we going to do tonight Server?")
+bed.on("update", () => {
+    if (bed.ticks === 1) {
+        bed.chat("What are we going to do tonight Server?")
 
-            bed.trigger("example:foo", { narf: true })
-        }
-    })
-}
+        bed.trigger("example:pinky", { narf: true });
+    }
+})
 ```
 
 ### Without DevBed
 
-```ts
-namespace Client {
-    const system = client.registerSystem(0, 0)
+```js
+const clientSystem = client.registerSystem(0, 0);
 
-    system.initialize = function() {
-        const eventDataDefaults = { narf: false }
-        system.registerEventData("example:foo", eventDataDefaults)
+clientSystem.initialize = () => {
+	const eventDataDefaults = {narf: false}
+	clientSystem.registerEventData("cov:pinky", eventDataDefaults)
 
-        const scriptLoggerConfig = system.createEventData(
-            SendToMinecraftClient.ScriptLoggerConfig
-        )
-        scriptLoggerConfig.data.log_errors = true
-        scriptLoggerConfig.data.log_information = true
-        scriptLoggerConfig.data.log_warnings = true
-        system.broadcastEvent(
-            SendToMinecraftClient.ScriptLoggerConfig,
-            scriptLoggerConfig
-        )
-    }
+	const scriptLoggerConfig = clientSystem.createEventData("minecraft:script_logger_config");
+	scriptLoggerConfig.data.log_errors = true;
+	scriptLoggerConfig.data.log_information = true;
+	scriptLoggerConfig.data.log_warnings = true;
+	clientSystem.broadcastEvent("minecraft:script_logger_config", scriptLoggerConfig);
+}
 
-    let firstTick = true
+let firstTick = true;
 
-    system.update = function() {
-        if (firstTick) {
-            firstTick = false
+clientSystem.update = () => {
 
-            let chatEventData = system.createEventData(
-                "minecraft:display_chat_event"
-            )
-            chatEventData.data.message =
-                "What are we going to do tonight Server?"
+	if (firstTick) {
+		firstTick = false;
 
-            system.broadcastEvent(
-                SendToMinecraftClient.DisplayChat,
-                chatEventData
-            )
+		let chatEventData = clientSystem.createEventData("minecraft:display_chat_event");
+		chatEventData.data.message = "What are we going to do tonight Server?";
 
-            const eventData = system.createEventData("example:foo")
-            eventData.data.narf = true
+		clientSystem.broadcastEvent("minecraft:display_chat_event", chatEventData);
 
-            system.broadcastEvent("example:foo", eventData)
-        }
-    }
+		let pinkyEventData = clientSystem.createEventData("cov:pinky");
+		pinkyEventData.data.narf = true;
+
+		clientSystem.broadcastEvent("cov:pinky", pinkyEventData);
+	}
 }
 ```
