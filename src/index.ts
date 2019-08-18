@@ -119,7 +119,7 @@ export class DevBed {
     /**
     * The type of object the system is.
     */
-    private readonly systemType: "client" | "server"
+    public readonly systemType: "client" | "server"
 
     /**
     * The total ticks that have passed since the script started.
