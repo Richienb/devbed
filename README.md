@@ -6,6 +6,14 @@ A simplified implementation of the Minecraft Bedrock Scripting API. For more inf
 
 ## Usage
 
+### Quickstart
+
+To begin, install some packages with `npm i -g yo generator-minecraft-addon-devbed` or with yarn: `yarn global add yo generator-minecraft-addon-devbed`
+
+Then run `yo minecraft-addon-devbed`.
+
+### Manual installation
+
 Install DevBed by running `npm install devbed` or with yarn: `yarn add devbed`.
 
 Then add the following code to the top of your `client.js` and `server.js` files:
