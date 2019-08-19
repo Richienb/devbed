@@ -515,7 +515,7 @@ export class DevBed {
     * @shorthand
     */
     public level(id: string, data?: any[] | object | Function): BedComponent | null | void {
-        if (this.systemType !== "server") throw "The level component can only be accessed in the server script."
+        if (this.systemType !== "server") throw new ReferenceError("The level component can only be accessed in the server script.")
         const obj = this.getComponent(id, this.system.level)
         if (!data) return obj
         if (typeof obj === "object" && obj !== null) obj.data(data)
