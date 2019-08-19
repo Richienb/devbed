@@ -55,20 +55,20 @@ import { DevBed } from "devbed"
 const bed = new DevBed(client)
 
 bed.on("initialize", () => {
+    bed.newEvent("example:pinky", { narf: false })
+
     bed.logconfig({
         error: true,
         warn: true,
         info: true
     })
-
-    bed.newEvent("example:pinky", { narf: false })
 })
 
 bed.on("update", () => {
     if (bed.ticks === 1) {
         bed.chat("What are we going to do tonight Server?")
 
-        bed.trigger("example:pinky", { narf: true });
+        bed.trigger("example:pinky", { narf: true })
     }
 })
 ```
@@ -76,35 +76,35 @@ bed.on("update", () => {
 ### Without DevBed
 
 ```js
-const clientSystem = client.registerSystem(0, 0);
+const clientSystem = client.registerSystem(0, 0)
 
 clientSystem.initialize = () => {
     const eventDataDefaults = {narf: false}
     clientSystem.registerEventData("example:pinky", eventDataDefaults)
 
-    const scriptLoggerConfig = clientSystem.createEventData("minecraft:script_logger_config");
-    scriptLoggerConfig.data.log_errors = true;
-    scriptLoggerConfig.data.log_information = true;
-    scriptLoggerConfig.data.log_warnings = true;
-    clientSystem.broadcastEvent("minecraft:script_logger_config", scriptLoggerConfig);
+    const scriptLoggerConfig = clientSystem.createEventData("minecraft:script_logger_config")
+    scriptLoggerConfig.data.log_errors = true
+    scriptLoggerConfig.data.log_information = true
+    scriptLoggerConfig.data.log_warnings = true
+    clientSystem.broadcastEvent("minecraft:script_logger_config", scriptLoggerConfig)
 }
 
-let firstTick = true;
+let firstTick = true
 
 clientSystem.update = () => {
 
     if (firstTick) {
-        firstTick = false;
+        firstTick = false
 
-        let chatEventData = clientSystem.createEventData("minecraft:display_chat_event");
-        chatEventData.data.message = "What are we going to do tonight Server?";
+        let chatEventData = clientSystem.createEventData("minecraft:display_chat_event")
+        chatEventData.data.message = "What are we going to do tonight Server?"
 
-        clientSystem.broadcastEvent("minecraft:display_chat_event", chatEventData);
+        clientSystem.broadcastEvent("minecraft:display_chat_event", chatEventData)
 
-        let pinkyEventData = clientSystem.createEventData("example:pinky");
-        pinkyEventData.data.narf = true;
+        let pinkyEventData = clientSystem.createEventData("example:pinky")
+        pinkyEventData.data.narf = true
 
-        clientSystem.broadcastEvent("example:pinky", pinkyEventData);
+        clientSystem.broadcastEvent("example:pinky", pinkyEventData)
     }
 }
 ```
