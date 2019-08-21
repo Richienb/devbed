@@ -134,7 +134,7 @@ export class DevBed {
     /**
     * The type of object the system is.
     */
-    public readonly systemType: "client" | "server"
+    private readonly systemType: "client" | "server"
 
     /**
     * The total ticks that have passed since the script started.
@@ -178,11 +178,10 @@ export class DevBed {
     * @param obj The client or server object.
     * @param bedspace The main DevBed namespace name to use.
     */
-    constructor(obj: IClient | IServer = client || server, { bedspace = "devbed" } = {}) {
-        this.system = obj.registerSystem(DevBed.version.minor, DevBed.version.major)
-        this.systemType = (obj as any).local_player ? "client" : "server"
-        //? Set as public in parameter?
+    constructor(obj: IClient | IServer, { bedspace = "devbed" } = {}) {
         this.obj = obj
+        this.system = this.obj.registerSystem(DevBed.version.minor, DevBed.version.major)
+        this.systemType = (this.obj as any).local_player ? "client" : "server"
 
         this.bedspace = bedspace
 
@@ -220,7 +219,6 @@ export class DevBed {
             this.players.push(username)
             this.callEachCallback("player_joined", username)
         })
-
     }
 
     /**
@@ -487,16 +485,6 @@ export class DevBed {
     */
     public chat(message: Stringable): void {
         this.trigger("minecraft:display_chat_event", { message: this.toString(message) })
-    }
-
-    /**
-    * Append to the log.
-    * @param message The message to append.
-    * @utility
-    */
-    public log(message: Stringable): void {
-        //? Remove this?
-        this.obj.log(this.toString(message))
     }
 
     /**
