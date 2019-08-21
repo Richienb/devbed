@@ -214,11 +214,13 @@ export class DevBed {
 
         if (this.systemType === "client") this.on("minecraft:client_entered_world", ({player}: {player: object}) => this.trigger(`${this.bedspace}:playerJoined`, { player }))
 
-        if (this.systemType === "server") this.on(`${this.bedspace}:playerJoined`, ({ player }: { player: object }) => {
-            const username = this.system.getComponent(player, "minecraft:nameable").data.name
-            this.players.push(username)
-            this.callEachCallback("player_joined", username)
-        })
+        if (this.systemType === "server") {
+            this.on(`${this.bedspace}:playerJoined`, ({ player }: { player: object }) => {
+                const username = this.system.getComponent(player, "minecraft:nameable").data.name
+                this.players.push(username)
+                this.callEachCallback("player_joined", username)
+            })
+        }
     }
 
     /**
@@ -243,7 +245,7 @@ export class DevBed {
         if (!cb) return promise
         promise
             .then((val) => cb(val))
-            .catch((err) => { throw err })
+            .catch((err) => {throw err})
         return undefined
     }
 
@@ -448,9 +450,11 @@ export class DevBed {
 
         let eventData = this.system.createEventData(isInternalEvent ? `${this.bedspace}:ev` : name)
 
-        if (!eventData) eventData = {
-            ...this.system.createEventData(`${this.bedspace}:blank`),
-            "__identifier__": name
+        if (!eventData) {
+            eventData = {
+                ...this.system.createEventData(`${this.bedspace}:blank`),
+                "__identifier__": name,
+            }
         }
 
         if (isInternalEvent) eventData.data = { ...eventData.data, name, data, isDevBed: true }
