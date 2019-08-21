@@ -72,12 +72,10 @@ bed.on("initialize", () => {
     })
 })
 
-bed.on("update", () => {
-    if (bed.ticks === 1) {
-        bed.chat("What are we going to do tonight Server?")
+bed.on("first_tick", () => {
+    bed.chat("What are we going to do tonight Server?")
 
-        bed.trigger("example:pinky", { narf: true })
-    }
+    bed.trigger("example:pinky", { narf: true })
 })
 ```
 

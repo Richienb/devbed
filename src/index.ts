@@ -108,6 +108,21 @@ interface BedGetComponent extends BedComponent {
 }
 
 /**
+* Custom events exposed by DevBed.
+*/
+type BedEvent = "first_tick" | "player_joined"
+
+/**
+* The events listenable by DevBed.
+*/
+type ListenableEvent = SendToMinecraftClient | SendToMinecraftServer | BedEvent | "initialise" | "update" | "shutdown" | string
+
+/**
+* The types of values that can be converted to a string.
+*/
+type Stringable = string | object | boolean | number
+
+/**
 * A simplified implementation of the Minecraft Bedrock Scripting API.
 */
 export class DevBed {
@@ -150,36 +165,62 @@ export class DevBed {
     private readonly bedspace: string = "devbed"
 
     /**
-    * @param c The client or server object.
+    * The client or server object.
+    */
+    private readonly obj: IClient | IServer
+
+    /**
+    * An array of players in a server.
+    */
+    public players: string[] = []
+
+    /**
+    * @param obj The client or server object.
     * @param bedspace The main DevBed namespace name to use.
     */
-    constructor(o: IClient | IServer, { bedspace = "devbed" } = {}) {
-        this.system = o.registerSystem(DevBed.version.minor, DevBed.version.major)
-        this.systemType = this.system.level ? "server" : "client"
+    constructor(obj: IClient | IServer = client || server, { bedspace = "devbed" } = {}) {
+        this.system = obj.registerSystem(DevBed.version.minor, DevBed.version.major)
+        this.systemType = (obj as any).local_player ? "client" : "server"
+        //? Set as public in parameter?
+        this.obj = obj
 
         this.bedspace = bedspace
 
         this.system.initialize = (ev: IEventData<any>) => {
-            this.callEach(this.callbacks.initialize, ev)
+            this.callEachCallback("initialize", ev)
         }
 
         this.system.update = (ev: IEventData<any>) => {
             this.ticks++
-            this.callEach(this.callbacks.update, ev)
+            if (this.ticks === 1) this.callEachCallback("first_tick")
+            this.callEachCallback("update", ev)
         }
 
         this.system.shutdown = (ev: IEventData<any>) => {
-            this.callEach(this.callbacks.shutdown, ev)
+            this.callEachCallback("shutdown", ev)
         }
 
-        this.system.registerEventData(`${this.bedspace}:ev`, { name: "", isDevBed: false, data: {} })
+        this.newEvent(`${this.bedspace}:ev`, { name: "", isDevBed: false, data: {} })
 
-        this.system.listenForEvent(`${this.bedspace}:ev`, ({ data }: { data: { isDevBed: boolean; name: string; data: object; }; }) => {
-            if (data.isDevBed !== true) throw new Error(`Conflict detected. Please ensure ${this.bedspace}:ev is not used by other scripts. If the issue persists, try changing your bedspace.`)
-            this.callEach(this.callbacks[data.name], data.data)
+        this.on(`${this.bedspace}:ev`, ({ isDevBed, name, data }: { isDevBed: boolean; name: string; data: object; }) => {
+            if (isDevBed !== true) throw new Error(`Conflict detected. Please ensure the ${this.bedspace} namespace is not used by other scripts. If the issue persists, try changing your bedspace.`)
+            this.callEachCallback(name, data)
         })
 
-        this.system.registerEventData(`${this.bedspace}:blank`, {})
+        this.newEvent(`${this.bedspace}:blank`, {})
+
+        this.newEvent(`${this.bedspace}:data`, { onlySource: false, allowSource: undefined, data: undefined })
+
+        this.newEvent(`${this.bedspace}:playerJoined`, { playerData: {} })
+
+        if (this.systemType === "client") this.on("minecraft:client_entered_world", ({player}: {player: object}) => this.trigger(`${this.bedspace}:playerJoined`, { player }))
+
+        if (this.systemType === "server") this.on(`${this.bedspace}:playerJoined`, ({ player }: { player: object }) => {
+            const username = this.system.getComponent(player, "minecraft:nameable").data.name
+            this.players.push(username)
+            this.callEachCallback("player_joined", username)
+        })
+
     }
 
     /**
@@ -204,7 +245,7 @@ export class DevBed {
         if (!cb) return promise
         promise
             .then((val) => cb(val))
-            .catch((err) => {throw err})
+            .catch((err) => { throw err })
         return undefined
     }
 
@@ -271,7 +312,7 @@ export class DevBed {
     * @component
     */
     private transformComponent(id: string, obj: any): BedComponent | null {
-        if (typeof obj === "object") {
+        if (typeof obj === "object" && obj != null) {
             obj.add = (ent: IEntity | BedEntity | number, existsOk: boolean = true): void => {
                 ent = this.parseType("entity", ent)
 
@@ -332,13 +373,14 @@ export class DevBed {
     }
 
     /**
-    * Call each callback in the array with the provided data.
+    * Call each callback of a specific name.
     * @param arr The array of callbacks.
     * @param data The data to provide in the callback.
     * @events
     */
-    private callEach(arr: Function[], data?: any): void {
-        if (Array.isArray(arr)) arr.map((cb: Function) => cb(data))
+    private callEachCallback(name: string, data?: any): void {
+        const callbacks = this.callbacks[name]
+        if (callbacks) callbacks.map((cb: Function) => cb(data))
     }
 
     /**
@@ -357,10 +399,10 @@ export class DevBed {
     * @param callback The callback to trigger.
     * @events
     */
-    public on(event: SendToMinecraftClient | SendToMinecraftServer | string, callback: Function): void {
+    public on(event: ListenableEvent, callback: Function): void {
         event.split(" ").map((ev) => {
             if (!this.callbacks[ev]) {
-                if (ev.includes(":")) this.system.listenForEvent(ev, (e: IEventData<any>) => this.callEach(this.callbacks[ev], e))
+                if (ev.includes(":")) this.system.listenForEvent(ev, ({ data }: IEventData<any>) => this.callEachCallback(ev, data))
                 this.callbacks[ev] = []
             }
             this.callbacks[ev].push(callback)
@@ -373,7 +415,7 @@ export class DevBed {
     * @param callback The callback to remove.
     * @events
     */
-    public off(event: SendToMinecraftClient | SendToMinecraftServer | string, callback?: Function): void {
+    public off(event: ListenableEvent, callback?: Function): void {
         event.split(" ").map((ev) => {
             if (callback) this.callbacks[ev] = this.callbacks[ev].filter((val: Function) => val !== callback)
             else this.callbacks[ev] = []
@@ -387,7 +429,7 @@ export class DevBed {
     * @events
     * @shorthand
     */
-    public once(event: SendToMinecraftClient | SendToMinecraftServer | string, callback?: Function): Promise<any> | void {
+    public once(event: ListenableEvent, callback?: Function): Promise<any> | void {
         return this.maybe(callback, new Promise((resolve) => {
             const handleFire = (ev: any) => {
                 this.off(event, handleFire)
@@ -408,7 +450,10 @@ export class DevBed {
 
         let eventData = this.system.createEventData(isInternalEvent ? `${this.bedspace}:ev` : name)
 
-        if (!eventData) eventData = this.system.createEventData(`${this.bedspace}:blank`)
+        if (!eventData) eventData = {
+            ...this.system.createEventData(`${this.bedspace}:blank`),
+            "__identifier__": name
+        }
 
         if (isInternalEvent) eventData.data = { ...eventData.data, name, data, isDevBed: true }
         else eventData.data = { ...eventData.data, ...data }
@@ -427,15 +472,41 @@ export class DevBed {
     }
 
     /**
+    * Convert value to string
+    * @param val The value to convert.
+    */
+    private toString(val: Stringable) {
+        return typeof val === "object" ? JSON.stringify(val) : val.toString()
+    }
+
+    /**
     * Post a message in chat.
     * @param message The message to post.
     * @events
     * @shorthand
     */
-    public chat(message: string | object | boolean | number): void {
-        if (typeof message === "object") message = JSON.stringify(message)
-        else if (typeof message === "number" || typeof message === "boolean") message = message.toString()
-        this.trigger("minecraft:display_chat_event", { message })
+    public chat(message: Stringable): void {
+        this.trigger("minecraft:display_chat_event", { message: this.toString(message) })
+    }
+
+    /**
+    * Append to the log.
+    * @param message The message to append.
+    * @utility
+    */
+    public log(message: Stringable): void {
+        //? Remove this?
+        this.obj.log(this.toString(message))
+    }
+
+    /**
+    * Post formatted json to the chat.
+    * @param obj The javascript object.
+    * @utility
+    * @shorthand
+    */
+    public json(message: object, indent: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 = 4): void {
+        this.chat(JSON.stringify(message, null, indent))
     }
 
     /**
@@ -516,7 +587,7 @@ export class DevBed {
     */
     public level(id: string, data?: any[] | object | Function): BedComponent | null | void {
         if (this.systemType !== "server") throw new ReferenceError("The level component can only be accessed in the server script.")
-        const obj = this.getComponent(id, this.system.level)
+        const obj = this.getComponent(id, (this.obj as any).level)
         if (!data) return obj
         if (typeof obj === "object" && obj !== null) obj.data(data)
         return null
@@ -640,7 +711,6 @@ export class DevBed {
         this.teleport(sel, dest, facing)
     }
 
-
     /**
     * Extend DevBed functionality.
     * @param data The data to apply to DevBed. Specify names as keys and functions as values.
@@ -648,5 +718,39 @@ export class DevBed {
     */
     public extend(data: { [key: string]: Function }): void {
         this.ext = { ...this.ext, ...data }
+    }
+
+    /**
+    * Proxy an event to another event.
+    * @param name The event to proxy.
+    * @param proxyName The proxied event.
+    * @utility
+    */
+    public proxyEvent(name: string, proxyName: string) {
+        this.on(name, () => this.callEachCallback(proxyName))
+    }
+
+    /**
+    * Receive data sent from the client or server.
+    * @param callback The callback to fire when receiving
+    * @utility
+    */
+    public receive(callback: Function) {
+        //! DO NOT LEAVE UNCOMPLETE
+        // TODO: Allow responding to recieved event.
+        this.on(`${this.bedspace}:data`, ({ onlySource, allowSource, data }: { onlySource: boolean, allowSource: string | void, data: any }) => {
+            if (onlySource && this.systemType === allowSource) callback(data)
+        })
+    }
+
+    /**
+    * Send data to the client or server.
+    * @param data The data to sent.
+    * @param destination Restrict the type of system to send the data to.
+    * @utility
+    */
+    public send(data: any, destination?: "client" | "server") {
+        //! DO NOT LEAVE UNCOMPLETE
+        this.trigger(`${this.bedspace}:data`, { onlySource: Boolean(destination), allowSource: destination, data })
     }
 }
