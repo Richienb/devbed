@@ -34,12 +34,12 @@ interface BedEntity extends IEntity {
     /**
     * Destroy the entity object.
     */
-    remove: void,
+    remove(): void,
 
     /**
     * Check if the entity object is valid.
     */
-    isValid: boolean
+    isValid(): boolean
 }
 
 /**
@@ -110,7 +110,7 @@ interface BedGetComponent extends BedComponent {
 /**
 * Custom events exposed by DevBed.
 */
-type BedEvent = "first_tick" | "player_joined"
+type BedEvent = "first_tick" | "player_joined" | "player_left"
 
 /**
 * The events listenable by DevBed.
@@ -121,6 +121,11 @@ type ListenableEvent = SendToMinecraftClient | SendToMinecraftServer | BedEvent 
 * The types of values that can be converted to a string.
 */
 type Stringable = string | object | boolean | number
+
+/**
+* An array that can hold 3 numbers of which represent coordinates.
+*/
+type Coords = [number, number, number]
 
 /**
 * A simplified implementation of the Minecraft Bedrock Scripting API.
@@ -185,18 +190,19 @@ export class DevBed {
 
         this.bedspace = bedspace
 
-        this.system.initialize = (ev: IEventData<any>) => {
-            this.callEachCallback("initialize", ev)
+        this.system.initialize = () => {
+            this.callEachCallback("initialize")
         }
 
-        this.system.update = (ev: IEventData<any>) => {
+        this.system.update = () => {
             this.ticks++
             if (this.ticks === 1) this.callEachCallback("first_tick")
-            this.callEachCallback("update", ev)
+            this.callEachCallback("update")
         }
 
-        this.system.shutdown = (ev: IEventData<any>) => {
-            this.callEachCallback("shutdown", ev)
+        this.system.shutdown = () => {
+            if (this.systemType === "client") this.trigger(`${this.bedspace}:playerLeft`, { player: (this.obj as any).local_player })
+            this.callEachCallback("shutdown")
         }
 
         this.newEvent(`${this.bedspace}:ev`, { name: "", isDevBed: false, data: {} })
@@ -206,19 +212,26 @@ export class DevBed {
             this.callEachCallback(name, data)
         })
 
-        this.newEvent(`${this.bedspace}:blank`, {})
+        this.newEvent(`${this.bedspace}:blank`)
 
         this.newEvent(`${this.bedspace}:data`, { onlySource: false, allowSource: undefined, data: undefined })
 
-        this.newEvent(`${this.bedspace}:playerJoined`, { playerData: {} })
+        this.newEvent(`${this.bedspace}:playerJoined`, {player: {}})
+        this.newEvent(`${this.bedspace}:playerLeft`, {player: {}})
 
-        if (this.systemType === "client") this.on("minecraft:client_entered_world", ({player}: {player: object}) => this.trigger(`${this.bedspace}:playerJoined`, { player }))
+        if (this.systemType === "client") this.on("minecraft:client_entered_world", ({ player }: { player: object }) => this.trigger(`${this.bedspace}:playerJoined`, { player }))
 
         if (this.systemType === "server") {
             this.on(`${this.bedspace}:playerJoined`, ({ player }: { player: object }) => {
                 const username = this.system.getComponent(player, "minecraft:nameable").data.name
                 this.players.push(username)
                 this.callEachCallback("player_joined", username)
+            })
+
+            this.on(`${this.bedspace}:playerLeft`, ({ player }: { player: object }) => {
+                const username = this.system.getComponent(player, "minecraft:nameable").data.name
+                this.players = this.players.filter((val) => val !== username)
+                this.callEachCallback("player_left", username)
             })
         }
     }
@@ -257,7 +270,7 @@ export class DevBed {
     */
     private parseType(format: "entity" | "id", val: IEntity | BedEntity | number): BedEntity | number {
         if (format === "id") return typeof val === "number" ? val : val.id
-        else return typeof val === "number" ? this.system.getEntitiesFromQuery(val) : val // if (format === "entity")
+        else return typeof val === "number" ? this.system.getEntitiesFromQuery(val) : val
     }
 
     /**
@@ -389,7 +402,7 @@ export class DevBed {
     * @param defaultData The callback to trigger.
     * @events
     */
-    public newEvent(event: string, defaultData: object) {
+    public newEvent(event: string, defaultData: object = {}) {
         this.system.registerEventData(event, defaultData)
     }
 
@@ -461,16 +474,6 @@ export class DevBed {
         else eventData.data = { ...eventData.data, ...data }
 
         this.system.broadcastEvent(name, eventData)
-    }
-
-    /**
-    * Broadcast a custom event.
-    * @param message The message to post.
-    * @param data The data to pass to the event handlers.
-    * @events
-    */
-    public bc(name: string, data: object = {}): void {
-        this.trigger(`${this.bedspace}:ev`, { name, data })
     }
 
     /**
@@ -566,7 +569,7 @@ export class DevBed {
     * @param coords 3 coords specifying the location of a block or 6 for an area of blocks.
     * @block
     */
-    public block(area: ITickingArea, coords: [number, number, number] | [number, number, number, number, number, number]): IBlock {
+    public block(area: ITickingArea, coords: Coords | [number, number, number, number, number, number]): IBlock {
         return coords.length === 3 ? this.system.getBlock(area, coords[0], coords[1], coords[2]) : this.system.getBlock(area, coords[0], coords[1], coords[2], coords[3], coords[4], coords[5])
     }
 
@@ -592,7 +595,7 @@ export class DevBed {
     * @slash
     * @shorthand
     */
-    public blockLoaded(coords: [number, number, number], callback?: Function): Promise<boolean> | void {
+    public blockLoaded(coords: Coords, callback?: Function): Promise<boolean> | void {
         return this.maybe(callback, new Promise((resolve) => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} air`, ({ data }: { data: { message: string; statusCode: number; } }) => resolve(data.message !== "Cannot test for block outside of the world"))))
     }
 
@@ -603,7 +606,7 @@ export class DevBed {
     * @slash
     * @beta
     */
-    public blockAt(coords: [number, number, number], callback?: Function): Promise<string> | void {
+    public blockAt(coords: Coords, callback?: Function): Promise<string> | void {
         return this.maybe(callback, new Promise((resolve) => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} air`, ({ data }: { data: { message: string; statusCode: number; } }) => {
             if (data.message.match(/Successfully found the block at .+\./)) resolve("Air")
             else {
@@ -678,7 +681,7 @@ export class DevBed {
     * @shorthand
     * @beta
     */
-    public teleport(sel: string | string[], dest: string | [number, number, number], facing?: [number, number] | [number, number, number] | string): void {
+    public teleport(sel: string | string[], dest: string | Coords, facing?: [number, number] | Coords | string): void {
         // TODO: Use best location calculation
         if (!Array.isArray(sel)) sel = [sel]
         if (facing) {
@@ -699,7 +702,7 @@ export class DevBed {
     * @shorthand
     * @beta
     */
-    public tp(sel: string | string[], dest: string | [number, number, number], facing?: [number, number] | [number, number, number] | string): void {
+    public tp(sel: string | string[], dest: string | Coords, facing?: [number, number] | Coords | string): void {
         this.teleport(sel, dest, facing)
     }
 
