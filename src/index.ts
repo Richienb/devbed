@@ -214,10 +214,10 @@ export class DevBed {
 
         this.newEvent(`${this.bedspace}:blank`)
 
-        this.newEvent(`${this.bedspace}:data`, { onlySource: false, allowSource: undefined, data: undefined })
+        this.newEvent(`${this.bedspace}:data`, { allowSource: "all", data: undefined })
 
-        this.newEvent(`${this.bedspace}:playerJoined`, {player: {}})
-        this.newEvent(`${this.bedspace}:playerLeft`, {player: {}})
+        this.newEvent(`${this.bedspace}:playerJoined`, { player: {} })
+        this.newEvent(`${this.bedspace}:playerLeft`, { player: {} })
 
         if (this.systemType === "client") this.on("minecraft:client_entered_world", ({ player }: { player: object }) => this.trigger(`${this.bedspace}:playerJoined`, { player }))
 
@@ -246,7 +246,7 @@ export class DevBed {
     */
     private getId(): string {
         this.ids++
-        return `${this.bedspace}_${this.ids}`
+        return `${this.bedspace}:custom${this.ids}`
     }
 
     /**
@@ -721,7 +721,7 @@ export class DevBed {
     * @param proxyName The proxied event.
     * @utility
     */
-    public proxyEvent(name: string, proxyName: string) {
+    public proxyEvent(name: string, proxyName: string): void {
         this.on(name, () => this.callEachCallback(proxyName))
     }
 
@@ -730,11 +730,10 @@ export class DevBed {
     * @param callback The callback to fire when receiving
     * @utility
     */
-    public receive(callback: Function) {
+    public receive(callback: (data: any, respond?: (data: any) => any) => any): void {
         //! DO NOT LEAVE UNCOMPLETE
-        // TODO: Allow responding to recieved event.
-        this.on(`${this.bedspace}:data`, ({ onlySource, allowSource, data }: { onlySource: boolean, allowSource: string | void, data: any }) => {
-            if (onlySource && this.systemType === allowSource) callback(data)
+        this.on(`${this.bedspace}:data`, ({ allowSource, data, id }: { allowSource: string, data: any, id: string }) => {
+            if (["all", this.systemType].includes(allowSource)) callback(data, (data: any) => this.trigger(id, data))
         })
     }
 
@@ -742,10 +741,18 @@ export class DevBed {
     * Send data to the client or server.
     * @param data The data to sent.
     * @param destination Restrict the type of system to send the data to.
+    * @param callback The callback to trigger with the returned data.
     * @utility
     */
-    public send(data: any, destination?: "client" | "server") {
+    public send(data: any, destination: "client" | "server" | "all" = "all", callback?: Function): void {
         //! DO NOT LEAVE UNCOMPLETE
-        this.trigger(`${this.bedspace}:data`, { onlySource: Boolean(destination), allowSource: destination, data })
+        const id = this.getId()
+        this.newEvent(id)
+        this.once(id, callback)
+        this.trigger(`${this.bedspace}:data`, {
+            allowSource: destination,
+            data,
+            id,
+        })
     }
 }

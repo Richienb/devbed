@@ -8,9 +8,9 @@
     "license": "MIT",
     "scripts": {
         "dev": "microbundle --target node --watch",
-        "build": "yarn build:js && yarn build:docs",
-        "build:js": "microbundle --target node",
-        "build:docs": "typedoc --out ./docs --mode file ./src",
+        "build": "yarn js && yarn docs",
+        "js": "microbundle --target node",
+        "docs": "typedoc --out ./docs --mode file ./src",
         "lint": "eslint src/*"
     },
     "devDependencies": {
