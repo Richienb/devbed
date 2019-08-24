@@ -491,6 +491,7 @@ export class DevBed {
     * @shorthand
     */
     public chat(message: Stringable): void {
+        // TODO: Allow only specific players to be targeted via /tell
         this.trigger("minecraft:display_chat_event", { message: this.toString(message) })
     }
 
