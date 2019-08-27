@@ -205,16 +205,19 @@ export class DevBed {
             this.callEachCallback("shutdown")
         }
 
-        this.newEvent(`${this.bedspace}:ev`, { name: "", isDevBed: false, data: {} })
+        if (this.systemType === "server" && this.system.createEventData(`${this.bedspace}:DevBedEvent`)) this.chat(`§eConflict detected. Please ensure the ${this.bedspace} namespace is not used by other scripts. If the issue persists, try changing your bedspace.`)
 
-        this.on(`${this.bedspace}:ev`, ({ isDevBed, name, data }: { isDevBed: boolean; name: string; data: object; }) => {
-            if (isDevBed !== true) throw new Error(`Conflict detected. Please ensure the ${this.bedspace} namespace is not used by other scripts. If the issue persists, try changing your bedspace.`)
+        this.newEvent(`${this.bedspace}:DevBedEvent`, { isDevBed: true })
+
+        this.newEvent(`${this.bedspace}:ev`, { sendName: "", id: "", data: {} })
+
+        this.on(`${this.bedspace}:ev`, ({ name, data }: { name: string; data: object; }) => {
             this.callEachCallback(name, data)
         })
 
         this.newEvent(`${this.bedspace}:blank`)
 
-        this.newEvent(`${this.bedspace}:data`, { allowSource: "all", data: undefined })
+        this.newEvent(`${this.bedspace}:data`, { sendName: "", allowSource: "all", data: undefined, id: "" })
 
         this.newEvent(`${this.bedspace}:playerJoined`, { player: {} })
         this.newEvent(`${this.bedspace}:playerLeft`, { player: {} })
@@ -234,6 +237,8 @@ export class DevBed {
                 this.callEachCallback("player_left", username)
             })
         }
+
+        this.receive("internal_executeCommand", ({ data }: { data: { command: string, callback: Function | undefined } }) => this.cmd(data.command, data.callback))
     }
 
     /**
@@ -258,7 +263,7 @@ export class DevBed {
         if (!cb) return promise
         promise
             .then((val) => cb(val))
-            .catch((err) => {throw err})
+            .catch((err) => { throw err })
         return undefined
     }
 
@@ -409,16 +414,22 @@ export class DevBed {
     /**
     * Listen for an event.
     * @param event The event identifier.
-    * @param callback The callback to trigger.
+    * @param callback The callback to trigger. A respond function is included for custom events.
     * @events
     */
-    public on(event: ListenableEvent, callback: Function): void {
+    public on(event: ListenableEvent, callback: Function | ((data: any, respond?: (data: any) => any) => any)): void {
         event.split(" ").map((ev) => {
-            if (!this.callbacks[ev]) {
-                if (ev.includes(":")) this.system.listenForEvent(ev, ({ data }: IEventData<any>) => this.callEachCallback(ev, data))
-                this.callbacks[ev] = []
+            if (!ev.includes(":") && !["initialize", "update", "shutdown", "first_tick"].includes(ev)) {
+                this.on(`${this.bedspace}:ev`, ({ sendName, data, id }: { sendName: string, data: any, id: string }) => {
+                    if (sendName === ev) callback(data, (data: any) => this.trigger(id, data))
+                })
+            } else {
+                if (!this.callbacks[ev]) {
+                    if (ev.includes(":")) this.system.listenForEvent(ev, ({ data }: IEventData<any>) => this.callEachCallback(ev, data))
+                    this.callbacks[ev] = []
+                }
+                this.callbacks[ev].push(callback)
             }
-            this.callbacks[ev].push(callback)
         })
     }
 
@@ -456,43 +467,52 @@ export class DevBed {
     * Trigger an event.
     * @param name The name of the event to post.
     * @param data The data to include in the event.
+    * @param callback The callback to handle a responded custom event.
     * @events
     */
-    public trigger(name: string, data: object = {}) {
-        const isInternalEvent = !name.includes(":")
+    public trigger(name: string, data: object = {}, callback?: Function): void {
+        if (!name.includes(":")) {
+            const id = this.getId()
+            this.newEvent(id)
+            if (callback) this.on(id, callback)
+            this.trigger(`${this.bedspace}:ev`, {
+                sendName: name,
+                data,
+                id,
+            })
+        } else {
+            let eventData = this.system.createEventData(name)
 
-        let eventData = this.system.createEventData(isInternalEvent ? `${this.bedspace}:ev` : name)
-
-        if (!eventData) {
-            eventData = {
-                ...this.system.createEventData(`${this.bedspace}:blank`),
-                "__identifier__": name,
+            if (!eventData) {
+                eventData = {
+                    ...this.system.createEventData(`${this.bedspace}:blank`),
+                    "__identifier__": name,
+                }
             }
+
+            eventData.data = { ...eventData.data, ...data }
+
+            this.system.broadcastEvent(name, eventData)
         }
-
-        if (isInternalEvent) eventData.data = { ...eventData.data, name, data, isDevBed: true }
-        else eventData.data = { ...eventData.data, ...data }
-
-        this.system.broadcastEvent(name, eventData)
     }
 
     /**
     * Convert value to string
     * @param val The value to convert.
     */
-    private toString(val: Stringable) {
+    private toString(val: Stringable): string {
         return typeof val === "object" ? JSON.stringify(val) : val.toString()
     }
 
     /**
     * Post a message in chat.
-    * @param message The message to post.
+    * @param message The message to post. Accepts unlimited arguments.
     * @events
     * @shorthand
     */
-    public chat(message: Stringable): void {
+    public chat(...message: Stringable[]): void {
         // TODO: Allow only specific players to be targeted via /tell
-        this.trigger("minecraft:display_chat_event", { message: this.toString(message) })
+        this.trigger("minecraft:display_chat_event", { message: message.map((msg) => this.toString(msg)).join(" ") })
     }
 
     /**
@@ -558,7 +578,8 @@ export class DevBed {
     * @slash
     */
     public cmd(command: string | string[], callback?: Function): Promise<object> | void {
-        return this.maybe(callback, new Promise((resolve) => {
+        if (this.systemType !== "server") this.send("internal_executeCommand", { data: { command, callback } }, "server")
+        else return this.maybe(callback, new Promise((resolve) => {
             if (Array.isArray(command)) command = command.join(" ")
             this.system.executeCommand(command, ({ data }: IExecuteCommandCallback) => resolve(data))
         }))
@@ -611,8 +632,8 @@ export class DevBed {
         return this.maybe(callback, new Promise((resolve) => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} air`, ({ data }: { data: { message: string; statusCode: number; } }) => {
             if (data.message.match(/Successfully found the block at .+\./)) resolve("Air")
             else {
-                const m = data.message.match(/The block at .+ is Air \(expected: (.+)\)\./)
-                if (m) resolve(m[1])
+                const res = data.message.match(/The block at .+ is Air \(expected: (.+)\)\./)
+                if (res) resolve(res[1])
                 else resolve(undefined) // TODO: Force load block to check then unload.
             }
         })))
@@ -728,29 +749,30 @@ export class DevBed {
 
     /**
     * Receive data sent from the client or server.
+    * @param name The name of the data to receive.
     * @param callback The callback to fire when receiving
     * @utility
     */
-    public receive(callback: (data: any, respond?: (data: any) => any) => any): void {
-        //! DO NOT LEAVE UNCOMPLETE
-        this.on(`${this.bedspace}:data`, ({ allowSource, data, id }: { allowSource: string, data: any, id: string }) => {
-            if (["all", this.systemType].includes(allowSource)) callback(data, (data: any) => this.trigger(id, data))
+    public receive(name: string, callback: (data: any, respond?: (data: any) => any) => any): void {
+        this.on(`${this.bedspace}:data`, ({ sendName, allowSource, data, id }: { sendName: string, allowSource: string, data: any, id: string }) => {
+            if (["all", this.systemType].includes(allowSource) && sendName === name) callback(data, (data: any) => this.trigger(id, data))
         })
     }
 
     /**
     * Send data to the client or server.
+    * @param name The name of the data to send.
     * @param data The data to sent.
     * @param destination Restrict the type of system to send the data to.
     * @param callback The callback to trigger with the returned data.
     * @utility
     */
-    public send(data: any, destination: "client" | "server" | "all" = "all", callback?: Function): void {
-        //! DO NOT LEAVE UNCOMPLETE
+    public send(name: string, data: any, destination: "client" | "server" | "all" = "all", callback?: Function): void {
         const id = this.getId()
         this.newEvent(id)
-        this.once(id, callback)
+        if (callback) this.on(id, callback)
         this.trigger(`${this.bedspace}:data`, {
+            sendName: name,
             allowSource: destination,
             data,
             id,
