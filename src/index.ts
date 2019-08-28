@@ -128,6 +128,28 @@ type Stringable = string | object | boolean | number
 type Coords = [number, number, number]
 
 /**
+* Chat colour codes.
+*/
+export enum chatColours {
+    darkRed = "§4",
+    red = "§c",
+    gold = "§6",
+    yellow = "§e",
+    darkGreen = "§2",
+    green = "§a",
+    aqua = "§b",
+    darkAqua = "§3",
+    darkBlue = "§1",
+    blue = "§9",
+    lightPurple = "§d",
+    darkPurple = "§5",
+    white = "§f",
+    grey = "§7",
+    darkGrey = "§8",
+    black = "§0"
+}
+
+/**
 * A simplified implementation of the Minecraft Bedrock Scripting API.
 */
 export class DevBed {
@@ -205,7 +227,7 @@ export class DevBed {
             this.callEachCallback("shutdown")
         }
 
-        if (this.systemType === "server" && this.system.createEventData(`${this.bedspace}:DevBedEvent`)) this.chat(`§eConflict detected. Please ensure the ${this.bedspace} namespace is not used by other scripts. If the issue persists, try changing your bedspace.`)
+        if (this.systemType === "server" && this.system.createEventData(`${this.bedspace}:DevBedEvent`)) this.chat(chatColours.yellow + `Conflict detected. Please ensure the ${this.bedspace} namespace is not used by other scripts. If the issue persists, try changing your bedspace.`)
 
         this.newEvent(`${this.bedspace}:DevBedEvent`, { isDevBed: true })
 
