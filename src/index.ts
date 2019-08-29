@@ -752,6 +752,6 @@ export class DevBed {
     * @utility
     */
     public proxyEvent(name: string, proxyName: string): void {
-        this.on(name, () => this.callEachCallback(proxyName))
+        this.on(name, (...data: any) => this.callEachCallback(proxyName, ...data))
     }
 }
