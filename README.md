@@ -63,8 +63,6 @@ import { DevBed } from "devbed"
 const bed = new DevBed(client)
 
 bed.on("initialize", () => {
-    bed.newEvent("example:pinky", { narf: false })
-
     bed.logconfig({
         error: true,
         warn: true,
@@ -75,7 +73,7 @@ bed.on("initialize", () => {
 bed.on("first_tick", () => {
     bed.chat("What are we going to do tonight Server?")
 
-    bed.trigger("example:pinky", { narf: true })
+    bed.trigger("pinky", { narf: true })
 })
 ```
 
