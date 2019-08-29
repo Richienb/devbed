@@ -2,7 +2,10 @@
     "name": "devbed",
     "version": "0.0.0",
     "main": "dist/index.js",
-    "files": ["src/**/*", "dist/**/*"],
+    "files": [
+        "src/**/*",
+        "dist/**/*"
+    ],
     "repository": "https://github.com/Richienb/devbed.git",
     "author": "Richie Bendall <richiebendall@gmail.com>",
     "license": "MIT",
@@ -16,13 +19,13 @@
     "devDependencies": {
         "@typescript-eslint/eslint-plugin": "^2.0.0",
         "@typescript-eslint/parser": "^2.0.0",
-        "eslint": "^6.2.1",
+        "eslint": "^6.2.2",
         "eslint-config-google": "^0.13.0",
         "microbundle": "^0.11.0",
         "minecraft-scripting-types-client": "^1.0.0",
         "minecraft-scripting-types-server": "^1.0.0",
         "typedoc": "^0.15.0",
-        "typescript": "^3.5.3"
+        "typescript": "^3.6.2"
     },
     "resolutions": {
         "microbundle/rollup-plugin-typescript2/rollup-pluginutils/micromatch/braces": "^2.3.1",

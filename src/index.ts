@@ -30,7 +30,7 @@
 /**
 * Entity object.
 */
-interface BedEntity extends IEntity {
+interface IBedEntity extends IEntity {
     /**
     * Destroy the entity object.
     */
@@ -45,7 +45,7 @@ interface BedEntity extends IEntity {
 /**
 * Query object.
 */
-interface BedQuery extends IQuery {
+interface IBedQuery extends IQuery {
     /**
     * Add a filter to the query.
     * @param identifier The identifier to use in the query.
@@ -62,75 +62,76 @@ interface BedQuery extends IQuery {
 /**
 * Component object.
 */
-interface BedComponent extends IComponent<any> {
+interface IBedComponent extends IComponent<any> {
     /**
     * Add the component to an entity.
     * @param ident The identifier of the entity.
     * @param existsOk If false an error will be thrown if the component already exists on the entity.
     */
-    add(ent: IEntity | BedEntity, existsOk: boolean): void,
+    add(ent: IEntity | IBedEntity, existsOk: boolean): void,
 
     /**
     * Check if an entity has a component.
     * @param ent The identifier of the entity.
     */
-    has(ent: IEntity | BedEntity): boolean,
+    has(ent: IEntity | IBedEntity): boolean,
 
     /**
     * Get or set the data of an entity.
     * @param ent The identifier of the entity.
     * @param data The data to change provided as an object or as a Function that takes and returns a value.
     */
-    data(ent: IEntity | BedEntity, data?: object | Function): IComponent<any> | void,
+    data(ent: IEntity | IBedEntity, data?: object | Function): IComponent<unknown> | null | void,
 
     /**
     * Reload the component.
     * @param ent The identifier of the entity.
     */
-    reload(ent: IEntity | BedEntity): void,
+    reload(ent: IEntity | IBedEntity): void,
 
     /**
     * Remove the component from an entity.
     * @param ent The identifier of the entity.
     */
-    remove(ent: IEntity | BedEntity): void
+    remove(ent: IEntity | IBedEntity): void
 }
 
 /**
 * Component object from getComponent.
 */
-interface BedGetComponent extends BedComponent {
+interface IBedGetComponent extends IBedComponent {
     /**
     * Get or set the data of an entity.
     * @param data The data to change provided as an object or as a Function that takes and returns a value.
     */
-    data(data: object | Function): IComponent<any> | void
+    data(data: object | Function): IComponent<unknown> | null | void
 }
 
 /**
 * Custom events exposed by DevBed.
 */
-type BedEvent = "first_tick" | "player_joined" | "player_left"
+type IBedEvent = "first_tick" | "player_joined" | "player_left"
 
 /**
 * The events listenable by DevBed.
 */
-type ListenableEvent = SendToMinecraftClient | SendToMinecraftServer | BedEvent | "initialise" | "update" | "shutdown" | string
+type IListenableEvent = SendToMinecraftClient | SendToMinecraftServer | IBedEvent | "initialise" | "update" | "shutdown" | string
 
 /**
 * The types of values that can be converted to a string.
 */
-type Stringable = string | object | boolean | number
+type IStringable = string | object | boolean | number
 
 /**
 * An array that can hold 3 numbers of which represent coordinates.
 */
-type Coords = [number, number, number]
+type ICoords = [number, number, number]
 
 /**
 * Chat colour codes.
 */
-export enum chatColours {
+/* eslint-disable no-unused-vars */
+export enum ChatColours {
     darkRed = "§4",
     red = "§c",
     gold = "§6",
@@ -148,6 +149,7 @@ export enum chatColours {
     darkGrey = "§8",
     black = "§0"
 }
+/* eslint-enable no-unused-vars */
 
 /**
 * A simplified implementation of the Minecraft Bedrock Scripting API.
@@ -156,7 +158,7 @@ export class DevBed {
     /**
     * The system object.
     */
-    public system: any
+    public system: IClientSystem<any> | IServerSystem<any>
 
     /**
     * The type of object the system is.
@@ -207,6 +209,7 @@ export class DevBed {
     */
     constructor(obj: IClient | IServer, { bedspace = "devbed" } = {}) {
         this.obj = obj
+        // @ts-ignore Signature compatibility doesn't matter.
         this.system = this.obj.registerSystem(DevBed.version.minor, DevBed.version.major)
         this.systemType = (this.obj as any).local_player ? "client" : "server"
 
@@ -227,40 +230,40 @@ export class DevBed {
             this.callEachCallback("shutdown")
         }
 
-        if (this.systemType === "server" && this.system.createEventData(`${this.bedspace}:DevBedEvent`)) this.chat(chatColours.yellow + `Conflict detected. Please ensure the ${this.bedspace} namespace is not used by other scripts. If the issue persists, try changing your bedspace.`)
+        if (this.systemType === "server" && this.system.createEventData(`${this.bedspace}:DevBedEvent`)) this.chat(ChatColours.yellow + `Conflict detected. Please ensure the ${this.bedspace} namespace is not used by other scripts. If the issue persists, try changing your bedspace.`)
 
         this.newEvent(`${this.bedspace}:DevBedEvent`, { isDevBed: true })
 
         this.newEvent(`${this.bedspace}:ev`, { sendName: "", id: "", data: {} })
 
-        this.on(`${this.bedspace}:ev`, ({ name, data }: { name: string; data: object; }) => {
-            this.callEachCallback(name, data)
+        this.on(`${this.bedspace}:ev`, ({ sendName, data, id }: { sendName: string, data: any, id: string }) => {
+            this.callEachCallback(sendName, data, (data: any) => this.trigger(id, data))
         })
 
         this.newEvent(`${this.bedspace}:blank`)
 
-        this.newEvent(`${this.bedspace}:data`, { sendName: "", allowSource: "all", data: undefined, id: "" })
-
         this.newEvent(`${this.bedspace}:playerJoined`, { player: {} })
         this.newEvent(`${this.bedspace}:playerLeft`, { player: {} })
 
-        if (this.systemType === "client") this.on("minecraft:client_entered_world", ({ player }: { player: object }) => this.trigger(`${this.bedspace}:playerJoined`, { player }))
+        if (this.systemType === "client") this.on("minecraft:client_entered_world", (data: IClientEnteredWorldEventData) => this.trigger(`${this.bedspace}:playerJoined`, data))
 
         if (this.systemType === "server") {
-            this.on(`${this.bedspace}:playerJoined`, ({ player }: { player: object }) => {
+            this.on(`${this.bedspace}:playerJoined`, ({ player }: IClientEnteredWorldEventData) => {
+                // @ts-ignore Component definately exists.
                 const username = this.system.getComponent(player, "minecraft:nameable").data.name
                 this.players.push(username)
                 this.callEachCallback("player_joined", username)
             })
 
             this.on(`${this.bedspace}:playerLeft`, ({ player }: { player: object }) => {
+                // @ts-ignore Component definately exists.
                 const username = this.system.getComponent(player, "minecraft:nameable").data.name
                 this.players = this.players.filter((val) => val !== username)
                 this.callEachCallback("player_left", username)
             })
         }
 
-        this.receive("internal_executeCommand", ({ data }: { data: { command: string, callback: Function | undefined } }) => this.cmd(data.command, data.callback))
+        if (this.systemType === "server") this.on("internal_executeCommand", ({ data }: { data: { command: string, callback: Function | undefined } }) => this.cmd(data.command, data.callback))
     }
 
     /**
@@ -276,6 +279,9 @@ export class DevBed {
         return `${this.bedspace}:custom${this.ids}`
     }
 
+    private maybe(cb: Function, promise: Promise<any>): void
+    private maybe(cb: any, promise: Promise<any>): Promise<any>
+
     /**
     * Convert a promise to a callback function when needed.
     * @param cb The callback to check.
@@ -285,19 +291,8 @@ export class DevBed {
         if (!cb) return promise
         promise
             .then((val) => cb(val))
-            .catch((err) => { throw err })
+            .catch((err) => {throw err})
         return undefined
-    }
-
-    /**
-    * Convert entity to id and entity to id.
-    * @param format The format to convert to.
-    * @param val The value to convert.
-    * @entity
-    */
-    private parseType(format: "entity" | "id", val: IEntity | BedEntity | number): BedEntity | number {
-        if (format === "id") return typeof val === "number" ? val : val.id
-        else return typeof val === "number" ? this.system.getEntitiesFromQuery(val) : val
     }
 
     /**
@@ -306,12 +301,11 @@ export class DevBed {
     * @param identifier The template identifier of the enitity to create.
     * @entity
     */
-    private createEntity(entityType?: "entity" | "item_entity", identifier?: string): BedEntity | null {
-        const obj = entityType && identifier ? this.system.createEntity(entityType, identifier) : this.system.createEntity()
-        if (typeof obj === "object") {
-            obj.remove = (): void => void this.system.destroyEntity(obj)
-            obj.isValid = (): boolean => Boolean(this.system.isValidEntity(obj))
-        }
+    private createEntity(entityType?: "entity" | "item_entity", identifier?: string): IBedEntity | null {
+        const obj: any = entityType && identifier ? this.system.createEntity(entityType, identifier) : this.system.createEntity()
+        if (obj === null) throw new ReferenceError("Unable to create the entity.")
+        obj.remove = (): void => void this.system.destroyEntity(obj)
+        obj.isValid = (): boolean => Boolean(this.system.isValidEntity(obj))
         return obj
     }
 
@@ -320,19 +314,21 @@ export class DevBed {
     * @param identifier The template identifier of the enitity to create.
     * @entity
     */
-    public entity(identifier?: string): BedEntity | null {
+    public entity(identifier?: string): IBedEntity | null {
         return this.createEntity("entity", identifier)
     }
-
 
     /**
     * Create an item.
     * @param identifier The template identifier of the item to create.
     * @entity
     */
-    public item(identifier?: string): BedEntity | null {
+    public item(identifier?: string): IBedEntity | null {
         return this.createEntity("item_entity", identifier)
     }
+
+    private parseTransform(data: object, transform: object | Function): object
+    private parseTransform(data: any[], transform: any[] | Function): any[]
 
     /**
     * Parse the transformation of an array or object.
@@ -351,38 +347,26 @@ export class DevBed {
     * @param obj The IComponent object.
     * @component
     */
-    private transformComponent(id: string, obj: any): BedComponent | null {
-        if (typeof obj === "object" && obj != null) {
-            obj.add = (ent: IEntity | BedEntity | number, existsOk: boolean = true): void => {
-                ent = this.parseType("entity", ent)
-
-                if (!existsOk && obj.has(ent)) throw new TypeError("Component already exists!")
-                return void this.system.createComponent(id, ent)
-            }
-            obj.has = (ent: IEntity | BedEntity | number): boolean => {
-                ent = this.parseType("entity", ent)
-
-                return Boolean(this.system.hasComponent(ent, id))
-            }
-            obj.data = (ent: IEntity | BedEntity | number, data?: object | Function): IComponent<any> | void => {
-                ent = this.parseType("entity", ent)
-
-                const curr = this.system.getComponent(ent, id)
-                if (!data) return curr
-
-                return void this.system.applyComponentChanges(ent, this.parseTransform(curr, data))
-            }
-            obj.reload = (ent: IEntity | BedEntity | number): void => {
-                ent = this.parseType("entity", ent)
-
-                return void this.system.applyComponentChanges(ent, id)
-            }
-            obj.remove = (ent: IEntity | BedEntity | number): void => {
-                ent = this.parseType("entity", ent)
-
-                return void this.system.destroyComponent(ent, id)
-            }
+    private transformComponent(id: string, obj: any): IBedComponent | null {
+        if (obj === null) throw new ReferenceError("Unable to setup the component.")
+        obj.add = (ent: IEntity | IBedEntity, existsOk: boolean = true): void => {
+            if (!existsOk && obj.has(ent)) throw new TypeError("Component already exists!")
+            this.system.createComponent(ent, id)
         }
+        obj.has = (ent: IEntity | IBedEntity): boolean => Boolean(this.system.hasComponent(ent, id))
+        obj.data = (ent: IEntity | IBedEntity, data?: object | Function): IComponent<unknown> | null | void => {
+            const curr = this.system.getComponent(ent, id)
+            if (!data) return curr
+            if (curr === null) throw new ReferenceError("Component not found.")
+
+            this.system.applyComponentChanges(ent, this.parseTransform(curr, data) as IComponent<any>)
+        }
+        obj.reload = (ent: IEntity | IBedEntity): void => {
+            const comp = this.system.getComponent(ent, id)
+            if (comp) return void this.system.applyComponentChanges(ent, comp)
+            throw new ReferenceError("Component not found.")
+        }
+        obj.remove = (ent: IEntity | IBedEntity): void => void this.system.destroyComponent(ent, id)
         return obj
     }
 
@@ -391,7 +375,7 @@ export class DevBed {
     * @param data The data to associate with the component.
     * @component
     */
-    public component(data: object = {}): BedComponent | null {
+    public component(data: object = {}): IBedComponent | null {
         const id = this.getId()
         const obj = this.system.registerComponent(id, data)
         return this.transformComponent(id, obj)
@@ -403,12 +387,12 @@ export class DevBed {
     * @param ent The entity with the component.
     * @component
     */
-    public getComponent(id: string, ent: IEntity | BedEntity): BedGetComponent | null {
-        const obj = this.transformComponent(id, this.system.getComponent(ent, id))
-        if (typeof obj === "object" && obj != null) {
-            const newData = obj.data
-            obj.data = (data: object | Function): IComponent<any> | void => newData(ent, data)
-        }
+    public getComponent(id: string, ent: IEntity | IBedEntity): IBedGetComponent | null {
+        const obj: any = this.transformComponent(id, this.system.getComponent(ent, id))
+
+        const prevData = obj.data
+        obj.data = (data: object | Function): IComponent<unknown> | null | void => prevData(ent, data)
+
         return obj
     }
 
@@ -418,9 +402,9 @@ export class DevBed {
     * @param data The data to provide in the callback.
     * @events
     */
-    private callEachCallback(name: string, data?: any): void {
+    private callEachCallback(name: string, ...data: any): void {
         const callbacks = this.callbacks[name]
-        if (callbacks) callbacks.map((cb: Function) => cb(data))
+        if (callbacks) callbacks.map((cb: Function) => cb(...data))
     }
 
     /**
@@ -429,9 +413,12 @@ export class DevBed {
     * @param defaultData The callback to trigger.
     * @events
     */
-    public newEvent(event: string, defaultData: object = {}) {
+    public newEvent(event: string, defaultData: object = {}): void {
         this.system.registerEventData(event, defaultData)
     }
+
+    public on(event: IListenableEvent, callback: Function): void
+    public on(event: IBedEvent, callback: Function | ((data: any, respond?: (data: any) => any) => any)): void
 
     /**
     * Listen for an event.
@@ -439,19 +426,13 @@ export class DevBed {
     * @param callback The callback to trigger. A respond function is included for custom events.
     * @events
     */
-    public on(event: ListenableEvent, callback: Function | ((data: any, respond?: (data: any) => any) => any)): void {
+    public on(event: IListenableEvent, callback: Function | ((data: any, respond?: (data: any) => any) => any)): void {
         event.split(" ").map((ev) => {
-            if (!ev.includes(":") && !["initialize", "update", "shutdown", "first_tick"].includes(ev)) {
-                this.on(`${this.bedspace}:ev`, ({ sendName, data, id }: { sendName: string, data: any, id: string }) => {
-                    if (sendName === ev) callback(data, (data: any) => this.trigger(id, data))
-                })
-            } else {
-                if (!this.callbacks[ev]) {
-                    if (ev.includes(":")) this.system.listenForEvent(ev, ({ data }: IEventData<any>) => this.callEachCallback(ev, data))
-                    this.callbacks[ev] = []
-                }
-                this.callbacks[ev].push(callback)
+            if (!this.callbacks[ev]) {
+                if (ev.includes(":")) this.system.listenForEvent(ev, ({ data }: IEventData<any>) => this.callEachCallback(ev, data))
+                this.callbacks[ev] = []
             }
+            this.callbacks[ev].push(callback)
         })
     }
 
@@ -461,7 +442,7 @@ export class DevBed {
     * @param callback The callback to remove.
     * @events
     */
-    public off(event: ListenableEvent, callback?: Function): void {
+    public off(event: IListenableEvent, callback?: Function): void {
         event.split(" ").map((ev) => {
             if (callback) this.callbacks[ev] = this.callbacks[ev].filter((val: Function) => val !== callback)
             else this.callbacks[ev] = []
@@ -475,7 +456,7 @@ export class DevBed {
     * @events
     * @shorthand
     */
-    public once(event: ListenableEvent, callback?: Function): Promise<any> | void {
+    public once(event: IListenableEvent, callback?: Function): Promise<any> | void {
         return this.maybe(callback, new Promise((resolve) => {
             const handleFire = (ev: any) => {
                 this.off(event, handleFire)
@@ -505,9 +486,9 @@ export class DevBed {
         } else {
             let eventData = this.system.createEventData(name)
 
-            if (!eventData) {
+            if (eventData === null) {
                 eventData = {
-                    ...this.system.createEventData(`${this.bedspace}:blank`),
+                    ...(this.system.createEventData(`${this.bedspace}:blank`) as IEventData<any>),
                     "__identifier__": name,
                 }
             }
@@ -522,7 +503,7 @@ export class DevBed {
     * Convert value to string
     * @param val The value to convert.
     */
-    private toString(val: Stringable): string {
+    private toString(val: IStringable): string {
         return typeof val === "object" ? JSON.stringify(val) : val.toString()
     }
 
@@ -532,7 +513,7 @@ export class DevBed {
     * @events
     * @shorthand
     */
-    public chat(...message: Stringable[]): void {
+    public chat(...message: IStringable[]): void {
         // TODO: Allow only specific players to be targeted via /tell
         this.trigger("minecraft:display_chat_event", { message: message.map((msg) => this.toString(msg)).join(" ") })
     }
@@ -570,27 +551,30 @@ export class DevBed {
     * @param fields The 3 query fields as an array of strings.
     * @entity
     */
-    public query(component?: string, fields: [string, string, string] = ["x", "y", "z"]): BedQuery | null {
-        const obj = component ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery()
-        if (typeof obj === "object") {
-            obj.filter = (identifier: string): void => this.system.addFilterToQuery(obj, identifier)
-            obj.search = (cfields?: [number, number, number, number, number, number]): any[] | null => cfields ?
-                this.system.getEntitiesFromQuery(obj, cfields[0], cfields[1], cfields[2], cfields[3], cfields[4], cfields[5]) :
-                this.system.getEntitiesFromQuery(obj)
-        }
+    public query(component?: string, fields: [string, string, string] = ["x", "y", "z"]): IBedQuery | null {
+        const obj: any = component ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery()
+        if (obj === null) throw new ReferenceError("Unable to create the query.")
+        obj.filter = (identifier: string): void => this.system.addFilterToQuery(obj, identifier)
+        obj.search = (cfields?: [number, number, number, number, number, number]): any[] | null => cfields ?
+            this.system.getEntitiesFromQuery(obj, cfields[0], cfields[1], cfields[2], cfields[3], cfields[4], cfields[5]) :
+            this.system.getEntitiesFromQuery(obj)
         return obj
     }
 
     /**
     * Get the entities within a specific radius of an entity.
-    * @param id The id of the center entity.
+    * @param ent The centre entity.
     * @param radius The radius to search.
     * @slash
     */
-    public radius(id: string, radius: number): IEntity | null {
-        const spacialQuery = this.query("minecraft:position")
-        const comp = this.system.getComponent("minecraft:position", id).data
-        return !comp ? comp : this.system.getEntitiesFromQuery(spacialQuery, comp.x - radius, comp.x + radius, comp.y - radius, comp.y + radius, comp.z - radius, comp.z + radius)
+    public radius(ent: IEntity | IBedEntity, radius: number): IEntity[] | void {
+        const spacialQuery = this.system.registerQuery("minecraft:position", "x", "y", "z")
+        const comp: IComponent<any> | null = this.system.getComponent(ent, "minecraft:position")
+
+        if (comp === null || spacialQuery === null) return undefined
+
+        const pos = comp.data
+        return this.system.getEntitiesFromQuery(spacialQuery, pos.x - 10, pos.x + 10, pos.y - 10, pos.y + 10, pos.z - 10, pos.z + 10)
     }
 
     /**
@@ -600,11 +584,13 @@ export class DevBed {
     * @slash
     */
     public cmd(command: string | string[], callback?: Function): Promise<object> | void {
-        if (this.systemType !== "server") this.send("internal_executeCommand", { data: { command, callback } }, "server")
-        else return this.maybe(callback, new Promise((resolve) => {
-            if (Array.isArray(command)) command = command.join(" ")
-            this.system.executeCommand(command, ({ data }: IExecuteCommandCallback) => resolve(data))
-        }))
+        if (this.systemType !== "server") this.trigger("internal_executeCommand", { data: { command, callback } })
+        else {
+            return this.maybe(callback, new Promise((resolve) => {
+                if (Array.isArray(command)) command = command.join(" ");
+                (this.system as IServerSystem<any>).executeCommand(command, ({ data }: IExecuteCommandCallback) => resolve(data))
+            }))
+        }
     }
 
     /**
@@ -613,8 +599,8 @@ export class DevBed {
     * @param coords 3 coords specifying the location of a block or 6 for an area of blocks.
     * @block
     */
-    public block(area: ITickingArea, coords: Coords | [number, number, number, number, number, number]): IBlock {
-        return coords.length === 3 ? this.system.getBlock(area, coords[0], coords[1], coords[2]) : this.system.getBlock(area, coords[0], coords[1], coords[2], coords[3], coords[4], coords[5])
+    public block(area: ITickingArea, coords: ICoords | [number, number, number, number, number, number]): IBlock | IBlock[][] | null {
+        return coords.length === 3 ? this.system.getBlock(area, coords[0], coords[1], coords[2]) : this.system.getBlocks(area, coords[0], coords[1], coords[2], coords[3], coords[4], coords[5])
     }
 
     /**
@@ -624,7 +610,7 @@ export class DevBed {
     * @entity
     * @shorthand
     */
-    public level(id: string, data?: any[] | object | Function): BedComponent | null | void {
+    public level(id: string, data?: any[] | object | Function): IBedComponent | null | void {
         if (this.systemType !== "server") throw new ReferenceError("The level component can only be accessed in the server script.")
         const obj = this.getComponent(id, (this.obj as any).level)
         if (!data) return obj
@@ -639,7 +625,7 @@ export class DevBed {
     * @slash
     * @shorthand
     */
-    public blockLoaded(coords: Coords, callback?: Function): Promise<boolean> | void {
+    public blockLoaded(coords: ICoords, callback?: Function): Promise<boolean> | void {
         return this.maybe(callback, new Promise((resolve) => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} air`, ({ data }: { data: { message: string; statusCode: number; } }) => resolve(data.message !== "Cannot test for block outside of the world"))))
     }
 
@@ -650,7 +636,7 @@ export class DevBed {
     * @slash
     * @beta
     */
-    public blockAt(coords: Coords, callback?: Function): Promise<string> | void {
+    public blockAt(coords: ICoords, callback?: Function): Promise<string> | void {
         return this.maybe(callback, new Promise((resolve) => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} air`, ({ data }: { data: { message: string; statusCode: number; } }) => {
             if (data.message.match(/Successfully found the block at .+\./)) resolve("Air")
             else {
@@ -725,7 +711,7 @@ export class DevBed {
     * @shorthand
     * @beta
     */
-    public teleport(sel: string | string[], dest: string | Coords, facing?: [number, number] | Coords | string): void {
+    public teleport(sel: string | string[], dest: string | ICoords, facing?: [number, number] | ICoords | string): void {
         // TODO: Use best location calculation
         if (!Array.isArray(sel)) sel = [sel]
         if (facing) {
@@ -746,7 +732,7 @@ export class DevBed {
     * @shorthand
     * @beta
     */
-    public tp(sel: string | string[], dest: string | Coords, facing?: [number, number] | Coords | string): void {
+    public tp(sel: string | string[], dest: string | ICoords, facing?: [number, number] | ICoords | string): void {
         this.teleport(sel, dest, facing)
     }
 
@@ -767,37 +753,5 @@ export class DevBed {
     */
     public proxyEvent(name: string, proxyName: string): void {
         this.on(name, () => this.callEachCallback(proxyName))
-    }
-
-    /**
-    * Receive data sent from the client or server.
-    * @param name The name of the data to receive.
-    * @param callback The callback to fire when receiving
-    * @utility
-    */
-    public receive(name: string, callback: (data: any, respond?: (data: any) => any) => any): void {
-        this.on(`${this.bedspace}:data`, ({ sendName, allowSource, data, id }: { sendName: string, allowSource: string, data: any, id: string }) => {
-            if (["all", this.systemType].includes(allowSource) && sendName === name) callback(data, (data: any) => this.trigger(id, data))
-        })
-    }
-
-    /**
-    * Send data to the client or server.
-    * @param name The name of the data to send.
-    * @param data The data to sent.
-    * @param destination Restrict the type of system to send the data to.
-    * @param callback The callback to trigger with the returned data.
-    * @utility
-    */
-    public send(name: string, data: any, destination: "client" | "server" | "all" = "all", callback?: Function): void {
-        const id = this.getId()
-        this.newEvent(id)
-        if (callback) this.on(id, callback)
-        this.trigger(`${this.bedspace}:data`, {
-            sendName: name,
-            allowSource: destination,
-            data,
-            id,
-        })
     }
 }
