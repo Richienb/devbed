@@ -2,29 +2,36 @@
     "name": "devbed",
     "version": "0.0.0",
     "main": "dist/index.js",
+    "files": [
+        "src/**/*",
+        "dist/**/*"
+    ],
     "repository": "https://github.com/Richienb/devbed.git",
     "author": "Richie Bendall <richiebendall@gmail.com>",
     "license": "MIT",
     "scripts": {
         "dev": "microbundle --target node --watch",
-        "build": "yarn build:js && yarn build:docs",
-        "build:js": "microbundle --target node",
-        "build:docs": "typedoc --out ./docs --mode file ./src",
+        "build": "yarn js && yarn docs",
+        "js": "microbundle --target node",
+        "docs": "typedoc --out ./docs --mode file ./src",
         "lint": "eslint src/*"
     },
     "devDependencies": {
-        "@typescript-eslint/eslint-plugin": "^1.13.0",
-        "@typescript-eslint/parser": "^1.13.0",
+        "@typescript-eslint/eslint-plugin": "^2.0.0",
+        "@typescript-eslint/parser": "^2.0.0",
         "eslint": "^6.2.2",
         "eslint-config-google": "^0.13.0",
         "microbundle": "^0.11.0",
         "minecraft-scripting-types-client": "^1.0.0",
         "minecraft-scripting-types-server": "^1.0.0",
         "typedoc": "^0.15.0",
-        "typescript": "^3.5.3"
+        "typescript": "^3.6.2"
     },
     "resolutions": {
         "microbundle/rollup-plugin-typescript2/rollup-pluginutils/micromatch/braces": "^2.3.1",
         "microbundle/rollup-plugin-postcss/cssnano/postcss-svgo/svgo/js-yaml": "^3.13.0"
+    },
+    "dependencies": {
+        "braces": "^3.0.2"
     }
 }
