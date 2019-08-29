@@ -30,8 +30,5 @@
     "resolutions": {
         "microbundle/rollup-plugin-typescript2/rollup-pluginutils/micromatch/braces": "^2.3.1",
         "microbundle/rollup-plugin-postcss/cssnano/postcss-svgo/svgo/js-yaml": "^3.13.0"
-    },
-    "dependencies": {
-        "braces": "^3.0.2"
     }
 }
