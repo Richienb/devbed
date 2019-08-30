@@ -257,14 +257,14 @@ export class DevBed {
                 // @ts-ignore Component definately exists.
                 const username = this.system.getComponent(player, "minecraft:nameable").data.name
                 this.players.push(username)
-                this.callEachCallback("player_joined", username)
+                this.callEachCallback("player_joined", username, player)
             })
 
-            this.on(`${this.bedspace}:playerLeft`, ({ player }: { player: object }) => {
+            this.on(`${this.bedspace}:playerLeft`, ({ player }: IClientEnteredWorldEventData) => {
                 // @ts-ignore Component definately exists.
                 const username = this.system.getComponent(player, "minecraft:nameable").data.name
                 this.players = this.players.filter((val) => val !== username)
-                this.callEachCallback("player_left", username)
+                this.callEachCallback("player_left", username, player)
             })
         }
 
