@@ -181,6 +181,11 @@ export class DevBed {
     public ext: any = {}
 
     /**
+    * The default data for custom events.
+    */
+    private defaultData: any = {}
+
+    /**
     * The API version targeted by DevBed.
     */
     public static readonly version = {
@@ -414,7 +419,8 @@ export class DevBed {
     * @events
     */
     public newEvent(event: string, defaultData: object = {}): void {
-        this.system.registerEventData(event, defaultData)
+        if (!event.includes(":")) this.defaultData[event] = defaultData
+        else this.system.registerEventData(event, defaultData)
     }
 
     public on(event: IListenableEvent, callback: Function): void
@@ -480,7 +486,10 @@ export class DevBed {
             if (callback) this.on(id, callback)
             this.trigger(`${this.bedspace}:ev`, {
                 sendName: name,
-                data,
+                data: {
+                    ...this.defaultData[name],
+                    ...data,
+                },
                 id,
             })
         } else {
