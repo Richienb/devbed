@@ -746,12 +746,24 @@ export class DevBed {
     }
 
     /**
-    * Extend DevBed functionality.
-    * @param data The data to apply to DevBed. Specify names as keys and functions as values.
+    * @param data The data to extend DevBed with. Specify names as keys and functions as values.
     * @utility
     */
-    public extend(data: { [key: string]: Function }): void {
-        this.ext = { ...this.ext, ...data }
+    public extend(data: { [key: string]: Function }): void
+
+    /**
+    * @param name The name of the data to extend DevBed with.
+    * @param data The data to extend DevBed with.
+    * @utility
+    */
+    public extend(name: string, data: any): void
+
+    /**
+    * Extend DevBed functionality.
+    */
+    public extend(dataOrName: { [key: string]: Function } | string, data?: any): void {
+        if (typeof dataOrName === "string") this.ext[dataOrName] = data
+        else this.ext = { ...this.ext, ...dataOrName }
     }
 
     /**
