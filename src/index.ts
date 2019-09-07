@@ -327,7 +327,7 @@ export class DevBed {
         if (obj === null) throw new ReferenceError("Unable to create the entity.")
         return this.modifyPrototype(obj, {
             remove: (): void => void this.system.destroyEntity(obj),
-            isValid: (): boolean => Boolean(this.system.isValidEntity(obj))
+            isValid: (): boolean => Boolean(this.system.isValidEntity(obj)),
         })
     }
 
@@ -389,7 +389,7 @@ export class DevBed {
                 if (comp) return void this.system.applyComponentChanges(ent, comp)
                 throw new ReferenceError("Component not found.")
             },
-            remove: (ent: IEntity | BedEntity): void => void this.system.destroyComponent(ent, id)
+            remove: (ent: IEntity | BedEntity): void => void this.system.destroyComponent(ent, id),
         })
     }
 
@@ -415,7 +415,7 @@ export class DevBed {
 
         const prevData = obj.data
         return this.modifyPrototype(obj, {
-            data: (data: object | Function): IComponent<unknown> | null | void => prevData(ent, data)
+            data: (data: object | Function): IComponent<unknown> | null | void => prevData(ent, data),
         })
     }
 
@@ -587,7 +587,7 @@ export class DevBed {
             filter: (identifier: string): void => this.system.addFilterToQuery(obj, identifier),
             search: (cfields?: [number, number, number, number, number, number]): any[] | null => cfields ?
                 this.system.getEntitiesFromQuery(obj, cfields[0], cfields[1], cfields[2], cfields[3], cfields[4], cfields[5]) :
-                this.system.getEntitiesFromQuery(obj)
+                this.system.getEntitiesFromQuery(obj),
         })
     }
 
