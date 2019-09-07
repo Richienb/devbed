@@ -304,6 +304,19 @@ export class DevBed {
     }
 
     /**
+    * Modify the prototype of an object.
+    * @param obj The object to be transformed.
+    * @param newProto The transformation to apply.
+    * @utility
+    */
+    private modifyPrototype(obj: any, newProto: object): any {
+        let proto = Object.getPrototypeOf(obj)
+        proto = { ...proto, ...newProto }
+        Object.setPrototypeOf(obj, proto)
+        return obj
+    }
+
+    /**
     * Create an entity.
     * @param entityType The type of entity to create.
     * @param identifier The template identifier of the enitity to create.
@@ -312,9 +325,10 @@ export class DevBed {
     private createEntity(entityType?: "entity" | "item_entity", identifier?: string): BedEntity | null {
         const obj: any = entityType && identifier ? this.system.createEntity(entityType, identifier) : this.system.createEntity()
         if (obj === null) throw new ReferenceError("Unable to create the entity.")
-        obj.remove = (): void => void this.system.destroyEntity(obj)
-        obj.isValid = (): boolean => Boolean(this.system.isValidEntity(obj))
-        return obj
+        return this.modifyPrototype(obj, {
+            remove: (): void => void this.system.destroyEntity(obj),
+            isValid: (): boolean => Boolean(this.system.isValidEntity(obj))
+        })
     }
 
     /**
@@ -357,25 +371,26 @@ export class DevBed {
     */
     private transformComponent(id: string, obj: any): BedComponent | null {
         if (obj === null) throw new ReferenceError("Unable to setup the component.")
-        obj.add = (ent: IEntity | BedEntity, existsOk: boolean = true): void => {
-            if (!existsOk && obj.has(ent)) throw new TypeError("Component already exists!")
-            this.system.createComponent(ent, id)
-        }
-        obj.has = (ent: IEntity | BedEntity): boolean => Boolean(this.system.hasComponent(ent, id))
-        obj.data = (ent: IEntity | BedEntity, data?: object | Function): IComponent<unknown> | null | void => {
-            const curr = this.system.getComponent(ent, id)
-            if (!data) return curr
-            if (curr === null) throw new ReferenceError("Component not found.")
+        return this.modifyPrototype(obj, {
+            add: (ent: IEntity | BedEntity, existsOk: boolean = true): void => {
+                if (!existsOk && obj.has(ent)) throw new TypeError("Component already exists!")
+                this.system.createComponent(ent, id)
+            },
+            has: (ent: IEntity | BedEntity): boolean => Boolean(this.system.hasComponent(ent, id)),
+            data: (ent: IEntity | BedEntity, data?: object | Function): IComponent<unknown> | null | void => {
+                const curr = this.system.getComponent(ent, id)
+                if (!data) return curr
+                if (curr === null) throw new ReferenceError("Component not found.")
 
-            this.system.applyComponentChanges(ent, this.parseTransform(curr, data) as IComponent<any>)
-        }
-        obj.reload = (ent: IEntity | BedEntity): void => {
-            const comp = this.system.getComponent(ent, id)
-            if (comp) return void this.system.applyComponentChanges(ent, comp)
-            throw new ReferenceError("Component not found.")
-        }
-        obj.remove = (ent: IEntity | BedEntity): void => void this.system.destroyComponent(ent, id)
-        return obj
+                this.system.applyComponentChanges(ent, this.parseTransform(curr, data) as IComponent<any>)
+            },
+            reload: (ent: IEntity | BedEntity): void => {
+                const comp = this.system.getComponent(ent, id)
+                if (comp) return void this.system.applyComponentChanges(ent, comp)
+                throw new ReferenceError("Component not found.")
+            },
+            remove: (ent: IEntity | BedEntity): void => void this.system.destroyComponent(ent, id)
+        })
     }
 
     /**
@@ -399,9 +414,9 @@ export class DevBed {
         const obj: any = this.transformComponent(id, this.system.getComponent(ent, id))
 
         const prevData = obj.data
-        obj.data = (data: object | Function): IComponent<unknown> | null | void => prevData(ent, data)
-
-        return obj
+        return this.modifyPrototype(obj, {
+            data: (data: object | Function): IComponent<unknown> | null | void => prevData(ent, data)
+        })
     }
 
     /**
@@ -568,11 +583,12 @@ export class DevBed {
     public query(component?: string, fields: [string, string, string] = ["x", "y", "z"]): BedQuery | null {
         const obj: any = component ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery()
         if (obj === null) throw new ReferenceError("Unable to create the query.")
-        obj.filter = (identifier: string): void => this.system.addFilterToQuery(obj, identifier)
-        obj.search = (cfields?: [number, number, number, number, number, number]): any[] | null => cfields ?
-            this.system.getEntitiesFromQuery(obj, cfields[0], cfields[1], cfields[2], cfields[3], cfields[4], cfields[5]) :
-            this.system.getEntitiesFromQuery(obj)
-        return obj
+        return this.modifyPrototype(obj, {
+            filter: (identifier: string): void => this.system.addFilterToQuery(obj, identifier),
+            search: (cfields?: [number, number, number, number, number, number]): any[] | null => cfields ?
+                this.system.getEntitiesFromQuery(obj, cfields[0], cfields[1], cfields[2], cfields[3], cfields[4], cfields[5]) :
+                this.system.getEntitiesFromQuery(obj)
+        })
     }
 
     /**
