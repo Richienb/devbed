@@ -790,7 +790,7 @@ export class DevBed {
     * @param data The data to extend DevBed with. Specify names as keys and functions as values.
     * @utility
     */
-    public extend(data: { [key: string]: Function }): void
+    public extend(data: { [key: string]: any }): void
 
     /**
     * @param name The name of the data to extend DevBed with.
@@ -802,7 +802,7 @@ export class DevBed {
     /**
     * Extend DevBed functionality.
     */
-    public extend(dataOrName: { [key: string]: Function } | string, data?: any): void {
+    public extend(dataOrName: { [key: string]: any } | string, data?: any): void {
         if (typeof dataOrName === "string") this.ext[dataOrName] = data
         else this.ext = { ...this.ext, ...dataOrName }
     }
