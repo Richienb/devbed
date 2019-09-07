@@ -30,7 +30,7 @@
 /**
 * Entity object.
 */
-interface IBedEntity extends IEntity {
+interface BedEntity extends IEntity {
     /**
     * Destroy the entity object.
     */
@@ -45,7 +45,7 @@ interface IBedEntity extends IEntity {
 /**
 * Query object.
 */
-interface IBedQuery extends IQuery {
+interface BedQuery extends IQuery {
     /**
     * Add a filter to the query.
     * @param identifier The identifier to use in the query.
@@ -62,44 +62,44 @@ interface IBedQuery extends IQuery {
 /**
 * Component object.
 */
-interface IBedComponent extends IComponent<any> {
+interface BedComponent extends IComponent<any> {
     /**
     * Add the component to an entity.
     * @param ident The identifier of the entity.
     * @param existsOk If false an error will be thrown if the component already exists on the entity.
     */
-    add(ent: IEntity | IBedEntity, existsOk: boolean): void,
+    add(ent: IEntity | BedEntity, existsOk: boolean): void,
 
     /**
     * Check if an entity has a component.
     * @param ent The identifier of the entity.
     */
-    has(ent: IEntity | IBedEntity): boolean,
+    has(ent: IEntity | BedEntity): boolean,
 
     /**
     * Get or set the data of an entity.
     * @param ent The identifier of the entity.
     * @param data The data to change provided as an object or as a Function that takes and returns a value.
     */
-    data(ent: IEntity | IBedEntity, data?: object | Function): IComponent<unknown> | null | void,
+    data(ent: IEntity | BedEntity, data?: object | Function): IComponent<unknown> | null | void,
 
     /**
     * Reload the component.
     * @param ent The identifier of the entity.
     */
-    reload(ent: IEntity | IBedEntity): void,
+    reload(ent: IEntity | BedEntity): void,
 
     /**
     * Remove the component from an entity.
     * @param ent The identifier of the entity.
     */
-    remove(ent: IEntity | IBedEntity): void
+    remove(ent: IEntity | BedEntity): void
 }
 
 /**
 * Component object from getComponent.
 */
-interface IBedGetComponent extends IBedComponent {
+interface BedGetComponent extends BedComponent {
     /**
     * Get or set the data of an entity.
     * @param data The data to change provided as an object or as a Function that takes and returns a value.
@@ -120,7 +120,7 @@ type IListenableEvent = SendToMinecraftClient | SendToMinecraftServer | IBedEven
 /**
 * The types of values that can be converted to a string.
 */
-type IStringable = string | object | boolean | number
+type IStringable = string | object | boolean | number | undefined
 
 /**
 * An array that can hold 3 numbers of which represent coordinates.
@@ -220,19 +220,19 @@ export class DevBed {
 
         this.bedspace = bedspace
 
-        this.system.initialize = () => {
-            this.callEachCallback("initialize")
+        this.system.initialize = (...args: any): void => {
+            this.callEachCallback("initialize", ...args)
         }
 
-        this.system.update = () => {
+        this.system.update = (...args: any): void => {
             this.ticks++
-            if (this.ticks === 1) this.callEachCallback("first_tick")
-            this.callEachCallback("update")
+            if (this.ticks === 1) this.callEachCallback("first_tick", ...args)
+            this.callEachCallback("update", ...args)
         }
 
-        this.system.shutdown = () => {
+        this.system.shutdown = (...args: any): void => {
             if (this.systemType === "client") this.trigger(`${this.bedspace}:playerLeft`, { player: (this.obj as any).local_player })
-            this.callEachCallback("shutdown")
+            this.callEachCallback("shutdown", ...args)
         }
 
         if (this.systemType === "server" && this.system.createEventData(`${this.bedspace}:DevBedEvent`)) this.chat(ChatColours.yellow + `Conflict detected. Please ensure the ${this.bedspace} namespace is not used by other scripts. If the issue persists, try changing your bedspace.`)
@@ -268,7 +268,8 @@ export class DevBed {
             })
         }
 
-        if (this.systemType === "server") this.on("internal_executeCommand", ({ data }: { data: { command: string, callback: Function | undefined } }) => this.cmd(data.command, data.callback))
+        // @ts-ignore Passing parameters should work.
+        if (this.systemType === "server") this.on("internal_executeCommand", ({ command, callbackOrAs, callback }: { command: string | string[], callbackOrAs?: Function | string | string[], callback?: Function }) => this.cmd(command, callbackOrAs, callback))
     }
 
     /**
@@ -296,7 +297,9 @@ export class DevBed {
         if (!cb) return promise
         promise
             .then((val) => cb(val))
-            .catch((err) => {throw err})
+            .catch((err) => {
+                throw err
+            })
         return undefined
     }
 
@@ -306,7 +309,7 @@ export class DevBed {
     * @param identifier The template identifier of the enitity to create.
     * @entity
     */
-    private createEntity(entityType?: "entity" | "item_entity", identifier?: string): IBedEntity | null {
+    private createEntity(entityType?: "entity" | "item_entity", identifier?: string): BedEntity | null {
         const obj: any = entityType && identifier ? this.system.createEntity(entityType, identifier) : this.system.createEntity()
         if (obj === null) throw new ReferenceError("Unable to create the entity.")
         obj.remove = (): void => void this.system.destroyEntity(obj)
@@ -319,7 +322,7 @@ export class DevBed {
     * @param identifier The template identifier of the enitity to create.
     * @entity
     */
-    public entity(identifier?: string): IBedEntity | null {
+    public entity(identifier?: string): BedEntity | null {
         return this.createEntity("entity", identifier)
     }
 
@@ -328,7 +331,7 @@ export class DevBed {
     * @param identifier The template identifier of the item to create.
     * @entity
     */
-    public item(identifier?: string): IBedEntity | null {
+    public item(identifier?: string): BedEntity | null {
         return this.createEntity("item_entity", identifier)
     }
 
@@ -352,26 +355,26 @@ export class DevBed {
     * @param obj The IComponent object.
     * @component
     */
-    private transformComponent(id: string, obj: any): IBedComponent | null {
+    private transformComponent(id: string, obj: any): BedComponent | null {
         if (obj === null) throw new ReferenceError("Unable to setup the component.")
-        obj.add = (ent: IEntity | IBedEntity, existsOk: boolean = true): void => {
+        obj.add = (ent: IEntity | BedEntity, existsOk: boolean = true): void => {
             if (!existsOk && obj.has(ent)) throw new TypeError("Component already exists!")
             this.system.createComponent(ent, id)
         }
-        obj.has = (ent: IEntity | IBedEntity): boolean => Boolean(this.system.hasComponent(ent, id))
-        obj.data = (ent: IEntity | IBedEntity, data?: object | Function): IComponent<unknown> | null | void => {
+        obj.has = (ent: IEntity | BedEntity): boolean => Boolean(this.system.hasComponent(ent, id))
+        obj.data = (ent: IEntity | BedEntity, data?: object | Function): IComponent<unknown> | null | void => {
             const curr = this.system.getComponent(ent, id)
             if (!data) return curr
             if (curr === null) throw new ReferenceError("Component not found.")
 
             this.system.applyComponentChanges(ent, this.parseTransform(curr, data) as IComponent<any>)
         }
-        obj.reload = (ent: IEntity | IBedEntity): void => {
+        obj.reload = (ent: IEntity | BedEntity): void => {
             const comp = this.system.getComponent(ent, id)
             if (comp) return void this.system.applyComponentChanges(ent, comp)
             throw new ReferenceError("Component not found.")
         }
-        obj.remove = (ent: IEntity | IBedEntity): void => void this.system.destroyComponent(ent, id)
+        obj.remove = (ent: IEntity | BedEntity): void => void this.system.destroyComponent(ent, id)
         return obj
     }
 
@@ -380,7 +383,7 @@ export class DevBed {
     * @param data The data to associate with the component.
     * @component
     */
-    public component(data: object = {}): IBedComponent | null {
+    public component(data: object = {}): BedComponent | null {
         const id = this.getId()
         const obj = this.system.registerComponent(id, data)
         return this.transformComponent(id, obj)
@@ -392,7 +395,7 @@ export class DevBed {
     * @param ent The entity with the component.
     * @component
     */
-    public getComponent(id: string, ent: IEntity | IBedEntity): IBedGetComponent | null {
+    public getComponent(id: string, ent: IEntity | BedEntity): BedGetComponent | null {
         const obj: any = this.transformComponent(id, this.system.getComponent(ent, id))
 
         const prevData = obj.data
@@ -403,7 +406,7 @@ export class DevBed {
 
     /**
     * Call each callback of a specific name.
-    * @param arr The array of callbacks.
+    * @param name The name of the callback to call.
     * @param data The data to provide in the callback.
     * @events
     */
@@ -463,10 +466,10 @@ export class DevBed {
     * @shorthand
     */
     public once(event: IListenableEvent, callback?: Function): Promise<any> | void {
-        return this.maybe(callback, new Promise((resolve) => {
-            const handleFire = (ev: any) => {
+        return this.maybe(callback, new Promise((resolve): void => {
+            const handleFire = (...data: any): void => {
                 this.off(event, handleFire)
-                resolve(ev)
+                resolve(data)
             }
             this.on(event, handleFire)
         }))
@@ -513,7 +516,9 @@ export class DevBed {
     * @param val The value to convert.
     */
     private toString(val: IStringable): string {
-        return typeof val === "object" ? JSON.stringify(val) : val.toString()
+        if (typeof val === "object") return JSON.stringify(val)
+        else if (val === undefined) return "undefined"
+        else return val.toString()
     }
 
     /**
@@ -523,18 +528,18 @@ export class DevBed {
     * @shorthand
     */
     public chat(...message: IStringable[]): void {
-        // TODO: Allow only specific players to be targeted via /tell
         this.trigger("minecraft:display_chat_event", { message: message.map((msg) => this.toString(msg)).join(" ") })
     }
 
     /**
     * Post formatted json to the chat.
     * @param obj The javascript object.
+    * @param indent The indention level to use.
     * @utility
     * @shorthand
     */
-    public json(message: object, indent: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 = 4): void {
-        this.chat(JSON.stringify(message, null, indent))
+    public json(obj: object, indent: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 = 4): void {
+        this.chat(JSON.stringify(obj, null, indent))
     }
 
     /**
@@ -560,7 +565,7 @@ export class DevBed {
     * @param fields The 3 query fields as an array of strings.
     * @entity
     */
-    public query(component?: string, fields: [string, string, string] = ["x", "y", "z"]): IBedQuery | null {
+    public query(component?: string, fields: [string, string, string] = ["x", "y", "z"]): BedQuery | null {
         const obj: any = component ? this.system.registerQuery(component, fields[0], fields[1], fields[2]) : this.system.registerQuery()
         if (obj === null) throw new ReferenceError("Unable to create the query.")
         obj.filter = (identifier: string): void => this.system.addFilterToQuery(obj, identifier)
@@ -576,28 +581,51 @@ export class DevBed {
     * @param radius The radius to search.
     * @slash
     */
-    public radius(ent: IEntity | IBedEntity, radius: number): IEntity[] | void {
+    public radius(ent: IEntity | BedEntity, radius: number): IEntity[] | void {
         const spacialQuery = this.system.registerQuery("minecraft:position", "x", "y", "z")
         const comp: IComponent<any> | null = this.system.getComponent(ent, "minecraft:position")
 
         if (comp === null || spacialQuery === null) return undefined
 
         const pos = comp.data
-        return this.system.getEntitiesFromQuery(spacialQuery, pos.x - 10, pos.x + 10, pos.y - 10, pos.y + 10, pos.z - 10, pos.z + 10)
+        return this.system.getEntitiesFromQuery(spacialQuery, pos.x - radius, pos.x + radius, pos.y - radius, pos.y + radius, pos.z - radius, pos.z + radius)
     }
 
     /**
-    * Execute a slash command.
     * @param command The command to execute.
     * @param callback The callback to invoke when the command returned data.
     * @slash
     */
-    public cmd(command: string | string[], callback?: Function): Promise<object> | void {
-        if (this.systemType !== "server") this.trigger("internal_executeCommand", { data: { command, callback } })
+    public cmd(command: string | string[], callback?: Function): Promise<object> | void
+
+    /**
+    * @param command The command to execute. Prepend with "c:" parameter for chat.
+    * @param as The player to execute the command as.
+    * @param callback The callback to invoke when the command returned data.
+    * @slash
+    */
+    public cmd(command: string | string[], as: string, callback?: Function): Promise<object> | void
+
+    /**
+    * Execute a slash command.
+    * @slash
+    */
+    public cmd(command: string | string[], callbackOrAs?: Function | string | string[], callback?: Function): Promise<object> | void {
+        if (this.systemType !== "server") this.trigger("internal_executeCommand", { command, callbackOrAs, callback })
         else {
-            return this.maybe(callback, new Promise((resolve) => {
-                if (Array.isArray(command)) command = command.join(" ");
-                (this.system as IServerSystem<any>).executeCommand(command, ({ data }: IExecuteCommandCallback) => resolve(data))
+            return this.maybe(typeof callbackOrAs === "function" ? callbackOrAs : callback, new Promise((resolve): void => {
+                if (Array.isArray(command)) command = command.join(" ")
+
+                if (typeof callbackOrAs === "string" || Array.isArray(callbackOrAs)) {
+                    if (command.startsWith("/")) command = command.slice(1)
+                    if (!Array.isArray(callbackOrAs)) callbackOrAs = [callbackOrAs]
+
+                    callbackOrAs.map((username: string) => {
+                        // @ts-ignore `command` will always be a string.
+                        if (command.startsWith("c:")) this.cmd(`tellraw @a {"rawtext":[{"text":"<${username}> ${command.slice(2).replace(/\"/g, "\\\"")}"}]}`, resolve)
+                        else this.cmd(`execute ${username} ~ ~ ~ ${command}`, resolve)
+                    })
+                } else (this.system as IServerSystem<any>).executeCommand(command, ({ data }: IExecuteCommandCallback) => resolve(data))
             }))
         }
     }
@@ -619,7 +647,7 @@ export class DevBed {
     * @entity
     * @shorthand
     */
-    public level(id: string, data?: any[] | object | Function): IBedComponent | null | void {
+    public level(id: string, data?: any[] | object | Function): BedComponent | null | void {
         if (this.systemType !== "server") throw new ReferenceError("The level component can only be accessed in the server script.")
         const obj = this.getComponent(id, (this.obj as any).level)
         if (!data) return obj
@@ -635,7 +663,7 @@ export class DevBed {
     * @shorthand
     */
     public blockLoaded(coords: ICoords, callback?: Function): Promise<boolean> | void {
-        return this.maybe(callback, new Promise((resolve) => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} air`, ({ data }: { data: { message: string; statusCode: number; } }) => resolve(data.message !== "Cannot test for block outside of the world"))))
+        return this.maybe(callback, new Promise((resolve): void | Promise<object> => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} air`, ({ statusMessage }: { statusMessage: string }) => resolve(statusMessage !== "Cannot test for block outside of the world"))))
     }
 
     /**
@@ -646,13 +674,11 @@ export class DevBed {
     * @beta
     */
     public blockAt(coords: ICoords, callback?: Function): Promise<string> | void {
-        return this.maybe(callback, new Promise((resolve) => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} air`, ({ data }: { data: { message: string; statusCode: number; } }) => {
-            if (data.message.match(/Successfully found the block at .+\./)) resolve("Air")
-            else {
-                const res = data.message.match(/The block at .+ is Air \(expected: (.+)\)\./)
-                if (res) resolve(res[1])
-                else resolve(undefined) // TODO: Force load block to check then unload.
-            }
+        return this.maybe(callback, new Promise((resolve): void | Promise<object> => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} Air`, ({ matches, statusMessage }: { matches: boolean, statusMessage: string }) => {
+            const res = statusMessage.match(/The block at .+,.+,.+ is (.+) \(expected .+\)\./)
+            if (matches) resolve("Air")
+            else if (res) resolve(res[1])
+            else resolve(undefined) // TODO: Force load block to check then unload.
         })))
     }
 
@@ -677,7 +703,7 @@ export class DevBed {
     * @param particles Whether or not to show the particles.
     * @slash
     */
-    public effect(sel: string | string[], eff?: string, seconds: number = 30, amplifier = 0, particles = true): void {
+    public effect(sel: string | string[], eff?: string, seconds = 30, amplifier = 0, particles = true): void {
         if (Array.isArray(sel)) sel = sel.join(" ")
         if (!eff) return void this.cmd(`effect ${sel} clear`)
         this.cmd(`effect ${sel} ${seconds} ${amplifier} ${!particles}`)
@@ -691,11 +717,10 @@ export class DevBed {
     * @shorthand
     */
     public locate(name: string, callback?: Function): Promise<[number, number] | [undefined, undefined]> | void {
-        return this.maybe(callback, new Promise((resolve) =>
-            this.cmd(`locate ${name}`, ({ data }: { data: { message: string; statusCode: number; } }) => {
-                const m = data.message.match(/The nearest .+ is at block (.+), \(y\?\), (.+)/)
-                if (!m) resolve([undefined, undefined])
-                else resolve([+m[0], +m[1]])
+        return this.maybe(callback, new Promise((resolve): void | Promise<object> =>
+            this.cmd(`locate ${name}`, ({ destination, statusCode }: { destination: { x: number, y: number, z: number }, statusCode: number }) => {
+                if (statusCode !== 0) resolve([undefined, undefined])
+                else resolve([destination.x, destination.z])
             })
         ))
     }
@@ -708,7 +733,7 @@ export class DevBed {
     * @shorthand
     */
     public chunkLoaded(coords: [number, number], callback?: Function): Promise<boolean> | void {
-        return this.maybe(callback, new Promise((resolve) => this.blockLoaded([coords[0] * 16, 0, coords[1] * 16], resolve)))
+        return this.maybe(callback, new Promise((resolve): void | Promise<boolean> => this.blockLoaded([coords[0] * 16, 0, coords[1] * 16], resolve)))
     }
 
     /**
