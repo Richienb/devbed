@@ -268,8 +268,10 @@ export class DevBed {
             })
         }
 
+        this.newEvent(`${this.bedspace}:executeCommand`)
+
         // @ts-ignore Passing parameters should work.
-        if (this.systemType === "server") this.on("internal_executeCommand", ({ command, callbackOrAs, callback }: { command: string | string[], callbackOrAs?: Function | string | string[], callback?: Function }) => this.cmd(command, callbackOrAs, callback))
+        if (this.systemType === "server") this.on(`${this.bedspace}:executeCommand`, ({ command, callbackOrAs, callback }: { command: string | string[], callbackOrAs?: Function | string | string[], callback?: Function }) => this.cmd(command, callbackOrAs, callback))
     }
 
     /**
@@ -627,7 +629,7 @@ export class DevBed {
     * @slash
     */
     public cmd(command: string | string[], callbackOrAs?: Function | string | string[], callback?: Function): Promise<object> | void {
-        if (this.systemType !== "server") this.trigger("internal_executeCommand", { command, callbackOrAs, callback })
+        if (this.systemType !== "server") this.trigger(`${this.bedspace}:executeCommand`, { command, callbackOrAs, callback })
         else {
             return this.maybe(typeof callbackOrAs === "function" ? callbackOrAs : callback, new Promise((resolve): void => {
                 if (Array.isArray(command)) command = command.join(" ")
