@@ -255,16 +255,16 @@ export class DevBed {
         if (this.systemType === "server") {
             this.on(`${this.bedspace}:playerJoined`, ({ player }: IClientEnteredWorldEventData) => {
                 // @ts-ignore Component definately exists.
-                const username = this.system.getComponent(player, "minecraft:nameable").data.name
-                this.players.push(username)
-                this.callEachCallback("player_joined", username, player)
+                const { name } = this.getComponent(player, "minecraft:nameable")
+                this.players.push(name)
+                this.trigger("player_joined", { name, player })
             })
 
             this.on(`${this.bedspace}:playerLeft`, ({ player }: IClientEnteredWorldEventData) => {
                 // @ts-ignore Component definately exists.
-                const username = this.system.getComponent(player, "minecraft:nameable").data.name
-                this.players = this.players.filter((val) => val !== username)
-                this.callEachCallback("player_left", username, player)
+                const { name } = this.getComponent(player, "minecraft:nameable")
+                this.players = this.players.filter((val) => val !== name)
+                this.trigger("player_left", { name, player })
             })
         }
 
@@ -413,7 +413,10 @@ export class DevBed {
     * @component
     */
     public getComponent(id: string, ent: IEntity | BedEntity): BedGetComponent | null {
-        const obj: any = this.transformComponent(id, this.system.getComponent(ent, id))
+        const comp = this.system.getComponent(ent, id)
+        if (!comp) throw ReferenceError("Component not found!")
+
+        const obj: any = this.transformComponent(id, comp.data)
 
         const prevData = obj.data
         return this.modifyPrototype(obj, {
