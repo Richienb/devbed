@@ -209,6 +209,11 @@ export class DevBed {
     public players: string[] = []
 
     /**
+    * The functions set to execute on interval.
+    */
+    public intervalled: { [id: number]: { time: number, func: Function } } = {}
+
+    /**
     * @param obj The client or server object.
     * @param bedspace The main DevBed namespace name to use.
     */
@@ -227,6 +232,9 @@ export class DevBed {
         this.system.update = (...args: any): void => {
             this.ticks++
             if (this.ticks === 1) this.callEachCallback("first_tick", ...args)
+            Object.values(this.intervalled).forEach(({ time, func }) => {
+                if (this.ticks % time === 0) func()
+            })
             this.callEachCallback("update", ...args)
         }
 
@@ -255,23 +263,30 @@ export class DevBed {
         if (this.systemType === "server") {
             this.on(`${this.bedspace}:playerJoined`, ({ player }: IClientEnteredWorldEventData) => {
                 // @ts-ignore Component definately exists.
-                const { name } = this.getComponent(player, "minecraft:nameable")
-                this.players.push(name)
-                this.trigger("player_joined", { name, player })
+                const { name: username } = this.getComponent("minecraft:nameable", player)
+                this.players.push(username)
+                this.trigger("player_joined", { username, player })
             })
 
             this.on(`${this.bedspace}:playerLeft`, ({ player }: IClientEnteredWorldEventData) => {
                 // @ts-ignore Component definately exists.
-                const { name } = this.getComponent(player, "minecraft:nameable")
-                this.players = this.players.filter((val) => val !== name)
-                this.trigger("player_left", { name, player })
+                const { name: username } = this.getComponent("minecraft:nameable", player)
+                this.players = this.players.filter((val) => val !== username)
+                this.trigger("player_left", { username, player })
             })
         }
 
         this.newEvent(`${this.bedspace}:executeCommand`)
 
         // @ts-ignore Passing parameters should work.
-        if (this.systemType === "server") this.on(`${this.bedspace}:executeCommand`, ({ command, callbackOrAs, callback }: { command: string | string[], callbackOrAs?: Function | string | string[], callback?: Function }) => this.cmd(command, callbackOrAs, callback))
+        if (this.systemType === "server") this.on(`${this.bedspace}:executeCommand`, ({ command, callbackOrAs, callback, player }: { command: string | string[], callbackOrAs?: Function | string | string[] | false, callback?: Function, player: IEntity }) => {
+            if (typeof callbackOrAs !== "function") this.cmd(command, callbackOrAs as any, callback)
+            else {
+                // @ts-ignore Component definately exists.
+                const { name: username } = this.getComponent("minecraft:nameable", player)
+                this.cmd(command, username, callback)
+            }
+        })
     }
 
     /**
@@ -625,14 +640,14 @@ export class DevBed {
     * @param callback The callback to invoke when the command returned data.
     * @slash
     */
-    public cmd(command: string | string[], as: string, callback?: Function): Promise<object> | void
+    public cmd(command: string | string[], as: string | string[], callback?: Function): Promise<object> | void
 
     /**
     * Execute a slash command.
     * @slash
     */
-    public cmd(command: string | string[], callbackOrAs?: Function | string | string[], callback?: Function): Promise<object> | void {
-        if (this.systemType !== "server") this.trigger(`${this.bedspace}:executeCommand`, { command, callbackOrAs, callback })
+    public cmd(command: string | string[], callbackOrAs?: Function | string | string[] | false, callback?: Function): Promise<object> | void {
+        if (this.systemType !== "server") this.trigger(`${this.bedspace}:executeCommand`, { command, callbackOrAs, callback, player: (this.obj as any).local_player })
         else {
             return this.maybe(typeof callbackOrAs === "function" ? callbackOrAs : callback, new Promise((resolve): void => {
                 if (Array.isArray(command)) command = command.join(" ")
@@ -820,5 +835,43 @@ export class DevBed {
     */
     public proxyEvent(name: string, proxyName: string): void {
         this.on(name, (...data: any) => this.callEachCallback(proxyName, ...data))
+    }
+
+    /**
+    * Execute callback every specified milliseconds.
+    * @param ms Milliseconds to wait between executions. (1 sec = 1000 ms)
+    * @param cb Callback to execute.
+    * @utility
+    */
+    public setInterval(ms: number, cb: Function): number {
+        const i = Object.keys(this.intervalled).length
+        this.intervalled[i] = {
+            time: Math.round(ms / 1000 * 20),
+            func: cb
+        }
+        return i
+    }
+
+    /**
+    * Clear interval set by {@link DevBed#setInterval}.
+    * @param id The id returned by the setInterval function.
+    * @utility
+    */
+    public clearInterval(id: number): void {
+        delete this.intervalled[id]
+    }
+
+    /**
+    * Execute a function once after a specific amount of time.
+    * @param ms Milliseconds to wait before calling. (1 sec = 1000 ms)
+    * @param cb Callback to execute.
+    * @utility
+    */
+    public setTimeout(ms: number, cb: Function): void {
+        const func = () => {
+            this.clearInterval(id)
+            cb()
+        }
+        const id = this.setInterval(ms, func)
     }
 }
