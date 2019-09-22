@@ -13,7 +13,7 @@
         "dev": "microbundle --target node --watch",
         "build": "yarn js && yarn docs",
         "js": "microbundle --target node",
-        "docs": "typedoc --out ./docs --mode file ./src",
+        "docs": "typedoc --out ./docs --mode file --target ES6 ./src",
         "lint": "eslint src/*"
     },
     "devDependencies": {

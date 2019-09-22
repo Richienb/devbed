@@ -211,7 +211,7 @@ export class DevBed {
     /**
     * The functions set to execute on interval.
     */
-    public intervalled: { [id: number]: { time: number, func: Function } } = {}
+    private intervalled: { [id: number]: { time: number, func: Function } } = {}
 
     /**
     * @param obj The client or server object.
@@ -279,14 +279,16 @@ export class DevBed {
         this.newEvent(`${this.bedspace}:executeCommand`)
 
         // @ts-ignore Passing parameters should work.
-        if (this.systemType === "server") this.on(`${this.bedspace}:executeCommand`, ({ command, callbackOrAs, callback, player }: { command: string | string[], callbackOrAs?: Function | string | string[] | false, callback?: Function, player: IEntity }) => {
-            if (typeof callbackOrAs !== "function") this.cmd(command, callbackOrAs as any, callback)
-            else {
-                // @ts-ignore Component definately exists.
-                const { name: username } = this.getComponent("minecraft:nameable", player)
-                this.cmd(command, username, callback)
-            }
-        })
+        if (this.systemType === "server") {
+            this.on(`${this.bedspace}:executeCommand`, ({ command, callbackOrAs, callback, player }: { command: string | string[], callbackOrAs?: Function | string | string[] | false, callback?: Function, player: IEntity }) => {
+                if (typeof callbackOrAs !== "function") this.cmd(command, callbackOrAs as any, callback)
+                else {
+                    // @ts-ignore Component definately exists.
+                    const { name: username } = this.getComponent("minecraft:nameable", player)
+                    this.cmd(command, username, callback)
+                }
+            })
+        }
     }
 
     /**
@@ -429,7 +431,7 @@ export class DevBed {
     */
     public getComponent(id: string, ent: IEntity | BedEntity): BedGetComponent | null {
         const comp = this.system.getComponent(ent, id)
-        if (!comp) throw ReferenceError("Component not found!")
+        if (!comp) throw new ReferenceError("Component not found!")
 
         const obj: any = this.transformComponent(id, comp.data)
 
@@ -847,13 +849,13 @@ export class DevBed {
         const i = Object.keys(this.intervalled).length
         this.intervalled[i] = {
             time: Math.round(ms / 1000 * 20),
-            func: cb
+            func: cb,
         }
         return i
     }
 
     /**
-    * Clear interval set by {@link DevBed#setInterval}.
+    * Clear interval set by {@link DevBed.setInterval}.
     * @param id The id returned by the setInterval function.
     * @utility
     */
@@ -868,10 +870,11 @@ export class DevBed {
     * @utility
     */
     public setTimeout(ms: number, cb: Function): void {
-        const func = () => {
-            this.clearInterval(id)
+        const data = { id: undefined }
+        const func = (): void => {
+            this.clearInterval(data.id)
             cb()
         }
-        const id = this.setInterval(ms, func)
+        data.id = this.setInterval(ms, func)
     }
 }
