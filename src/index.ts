@@ -877,6 +877,6 @@ export class DevBed {
             this.clearInterval(data.id)
             cb()
         }
-        data.id = this.setInterval(cb, time, type)
+        data.id = this.setInterval(func, time, type)
     }
 }
