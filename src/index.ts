@@ -841,14 +841,15 @@ export class DevBed {
 
     /**
     * Execute callback every specified milliseconds.
-    * @param ms Milliseconds to wait between executions. (1 sec = 1000 ms)
     * @param cb Callback to execute.
+    * @param time Milliseconds to wait between executions. (1 sec = 1000 ms)
+    * @param type The type of time to count. Can be set to `ms` or `ticks`.
     * @utility
     */
-    public setInterval(ms: number, cb: Function): number {
+    public setInterval(cb: Function, time: number, type: "ms" | "ticks" = "ms"): number {
         const i = Object.keys(this.intervalled).length
         this.intervalled[i] = {
-            time: Math.round(ms / 1000 * 20),
+            time: type === "ms" ? Math.round(time / 1000 * 20) : time,
             func: cb,
         }
         return i
@@ -865,16 +866,17 @@ export class DevBed {
 
     /**
     * Execute a function once after a specific amount of time.
-    * @param ms Milliseconds to wait before calling. (1 sec = 1000 ms)
     * @param cb Callback to execute.
+    * @param time Milliseconds to wait before executing. (1 sec = 1000 ms)
+    * @param type The type of time to count. Can be set to `ms` or `ticks`.
     * @utility
     */
-    public setTimeout(ms: number, cb: Function): void {
+    public setTimeout(cb: Function, time: number, type: "ms" | "ticks" = "ms"): void {
         const data = { id: undefined }
         const func = (): void => {
             this.clearInterval(data.id)
             cb()
         }
-        data.id = this.setInterval(ms, func)
+        data.id = this.setInterval(cb, time, type)
     }
 }
