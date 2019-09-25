@@ -211,7 +211,7 @@ export class DevBed {
     /**
     * The functions set to execute on interval.
     */
-    private intervalled: { [id: number]: { time: number, func: Function } } = {}
+    private intervalled: { [id: number]: { time: number, func: Function, passed: number } } = {}
 
     /**
     * @param obj The client or server object.
@@ -232,8 +232,12 @@ export class DevBed {
         this.system.update = (...args: any): void => {
             this.ticks++
             if (this.ticks === 1) this.callEachCallback("first_tick", ...args)
-            Object.values(this.intervalled).forEach(({ time, func }) => {
-                if (this.ticks % time === 0) func()
+            Object.entries(this.intervalled).forEach(([id, { time, func }]) => {
+                this.intervalled[id].passed++
+                if (this.intervalled[id].passed === time) {
+                    this.intervalled[id].passed = 0
+                    func()
+                }
             })
             this.callEachCallback("update", ...args)
         }
@@ -851,13 +855,14 @@ export class DevBed {
         this.intervalled[i] = {
             time: type === "ms" ? Math.round(time / 1000 * 20) : time,
             func: cb,
+            passed: 0,
         }
         return i
     }
 
     /**
-    * Clear interval set by {@link DevBed.setInterval}.
-    * @param id The id returned by the setInterval function.
+    * Clear interval set by {@link DevBed.setInterval}. Can also be used to cancel setTimeout.
+    * @param id The id returned by the setInterval or setTimeout function.
     * @utility
     */
     public clearInterval(id: number): void {
@@ -871,12 +876,13 @@ export class DevBed {
     * @param type The type of time to count. Can be set to `ms` or `ticks`.
     * @utility
     */
-    public setTimeout(cb: Function, time: number, type: "ms" | "ticks" = "ms"): void {
+    public setTimeout(cb: Function, time: number, type: "ms" | "ticks" = "ms"): number {
         const data = { id: undefined }
         const func = (): void => {
             this.clearInterval(data.id)
             cb()
         }
         data.id = this.setInterval(func, time, type)
+        return data.id
     }
 }
