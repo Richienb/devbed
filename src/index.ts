@@ -851,7 +851,7 @@ export class DevBed {
     * @utility
     */
     public setInterval(cb: Function, time: number, type: "ms" | "ticks" = "ms"): number {
-        const i = Object.keys(this.intervalled).length
+        const i = +Object.keys(this.intervalled).splice(-1) + 1 || 0
         this.intervalled[i] = {
             time: type === "ms" ? Math.round(time / 1000 * 20) : time,
             func: cb,
