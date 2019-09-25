@@ -861,7 +861,7 @@ export class DevBed {
     }
 
     /**
-    * Clear interval set by {@link DevBed.setInterval}. Can also be used to cancel setTimeout.
+    * Clear interval set by {@link DevBed.setInterval}. Can also be used to cancel {@link DevBed.setTimeout}.
     * @param id The id returned by the setInterval or setTimeout function.
     * @utility
     */
