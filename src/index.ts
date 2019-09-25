@@ -865,8 +865,9 @@ export class DevBed {
     * @param id The id returned by the setInterval or setTimeout function.
     * @utility
     */
-    public clearInterval(id: number): void {
-        delete this.intervalled[id]
+    public clearInterval(id?: number): void {
+        if (!id) this.intervalled = {}
+        else delete this.intervalled[id]
     }
 
     /**
