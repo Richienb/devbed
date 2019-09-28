@@ -94,6 +94,11 @@ interface BedComponent extends IComponent<any> {
     * @param ent The identifier of the entity.
     */
     remove(ent: IEntity | BedEntity): void
+
+    /**
+    * Properties from a regular IComponent data parameter.
+    */
+    [v: string]: IComponent<any>["data"]
 }
 
 /**
@@ -104,7 +109,7 @@ interface BedGetComponent extends BedComponent {
     * Get or set the data of an entity.
     * @param data The data to change provided as an object or as a Function that takes and returns a value.
     */
-    data(data: object | Function): IComponent<unknown> | null | void
+    data(data: object | Function): IComponent<unknown> | null | void;
 }
 
 /**
@@ -219,8 +224,7 @@ export class DevBed {
     */
     constructor(obj: IClient | IServer, { bedspace = "devbed" } = {}) {
         this.obj = obj
-        // @ts-ignore Signature compatibility doesn't matter.
-        this.system = this.obj.registerSystem(DevBed.version.minor, DevBed.version.major)
+        this.system = (this.obj as any).registerSystem(DevBed.version.minor, DevBed.version.major)
         this.systemType = (this.obj as any).local_player ? "client" : "server"
 
         this.bedspace = bedspace
@@ -265,15 +269,13 @@ export class DevBed {
         if (this.systemType === "client") this.on("minecraft:client_entered_world", (data: IClientEnteredWorldEventData) => this.trigger(`${this.bedspace}:playerJoined`, data))
 
         if (this.systemType === "server") {
-            this.on(`${this.bedspace}:playerJoined`, ({ player }: IClientEnteredWorldEventData) => {
-                // @ts-ignore Component definately exists.
+            this.on(`${this.bedspace}:playerJoined`, ({ player }: NonNullable<IClientEnteredWorldEventData>) => {
                 const { name: username } = this.getComponent("minecraft:nameable", player)
                 this.players.push(username)
                 this.trigger("player_joined", { username, player })
             })
 
-            this.on(`${this.bedspace}:playerLeft`, ({ player }: IClientEnteredWorldEventData) => {
-                // @ts-ignore Component definately exists.
+            this.on(`${this.bedspace}:playerLeft`, ({ player }: NonNullable<IClientEnteredWorldEventData>) => {
                 const { name: username } = this.getComponent("minecraft:nameable", player)
                 this.players = this.players.filter((val) => val !== username)
                 this.trigger("player_left", { username, player })
@@ -282,12 +284,10 @@ export class DevBed {
 
         this.newEvent(`${this.bedspace}:executeCommand`)
 
-        // @ts-ignore Passing parameters should work.
         if (this.systemType === "server") {
-            this.on(`${this.bedspace}:executeCommand`, ({ command, callbackOrAs, callback, player }: { command: string | string[], callbackOrAs?: Function | string | string[] | false, callback?: Function, player: IEntity }) => {
+            this.on(`${this.bedspace}:executeCommand`, ({ command, callbackOrAs, callback, player }: { command: string | string[], callbackOrAs?: Function | string | string[] | false, callback?: Function, player: NonNullable<IEntity> }) => {
                 if (typeof callbackOrAs !== "function") this.cmd(command, callbackOrAs as any, callback)
                 else {
-                    // @ts-ignore Component definately exists.
                     const { name: username } = this.getComponent("minecraft:nameable", player)
                     this.cmd(command, username, callback)
                 }
@@ -663,8 +663,7 @@ export class DevBed {
                     if (!Array.isArray(callbackOrAs)) callbackOrAs = [callbackOrAs]
 
                     callbackOrAs.map((username: string) => {
-                        // @ts-ignore `command` will always be a string.
-                        if (command.startsWith("c:")) this.cmd(`tellraw @a {"rawtext":[{"text":"<${username}> ${command.slice(2).replace(/\"/g, "\\\"")}"}]}`, resolve)
+                        if ((command as string).startsWith("c:")) this.cmd(`tellraw @a {"rawtext":[{"text":"<${username}> ${(command as string).slice(2).replace(/\"/g, "\\\"")}"}]}`, resolve)
                         else this.cmd(`execute ${username} ~ ~ ~ ${command}`, resolve)
                     })
                 } else (this.system as IServerSystem<any>).executeCommand(command, ({ data }: IExecuteCommandCallback) => resolve(data))
