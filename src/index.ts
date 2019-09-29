@@ -93,7 +93,7 @@ interface BedComponent extends IComponent<any> {
     * Remove the component from an entity.
     * @param ent The identifier of the entity.
     */
-    remove(ent: IEntity | BedEntity): void
+    remove(ent: IEntity | BedEntity): void,
 
     /**
     * Properties from a regular IComponent data parameter.
@@ -109,7 +109,7 @@ interface BedGetComponent extends BedComponent {
     * Get or set the data of an entity.
     * @param data The data to change provided as an object or as a Function that takes and returns a value.
     */
-    data(data: object | Function): IComponent<unknown> | null | void;
+    data(data: object | Function): IComponent<unknown> | null | void
 }
 
 /**
@@ -516,23 +516,26 @@ export class DevBed {
         }))
     }
 
+    public trigger(name: string, data: object, callback?: Function): void
+    public trigger(name: string, callback?: Function): void
+
     /**
     * Trigger an event.
     * @param name The name of the event to post.
-    * @param data The data to include in the event.
+    * @param dataOrCb The data to include in the event.
     * @param callback The callback to handle a responded custom event.
     * @events
     */
-    public trigger(name: string, data: object = {}, callback?: Function): void {
+    public trigger(name: string, dataOrCb: object | Function = {}, callback?: Function): void {
         if (!name.includes(":")) {
             const id = this.getId()
             this.newEvent(id)
-            if (callback) this.on(id, callback)
+            if (callback) this.on(id, (typeof dataOrCb === "function") ? dataOrCb : callback)
             this.trigger(`${this.bedspace}:ev`, {
                 sendName: name,
                 data: {
                     ...this.defaultData[name],
-                    ...data,
+                    ...typeof dataOrCb === "object" ? dataOrCb : {},
                 },
                 id,
             })
@@ -546,7 +549,7 @@ export class DevBed {
                 }
             }
 
-            eventData.data = { ...eventData.data, ...data }
+            eventData.data = { ...eventData.data, ...typeof dataOrCb === "object" ? dataOrCb : {} }
 
             this.system.broadcastEvent(name, eventData)
         }
