@@ -113,6 +113,18 @@ interface BedGetComponent extends BedComponent {
 }
 
 /**
+* An objective.
+*/
+interface Objective {
+    name?: string,
+    display?: "list" | "sidebar" | "belowName",
+    order?: "ascending" | "descending",
+    players?: {
+        [player: string]: number
+    }
+}
+
+/**
 * Custom events exposed by DevBed.
 */
 type IBedEvent = "first_tick" | "player_joined" | "player_left"
@@ -217,6 +229,38 @@ export class DevBed {
     * The functions set to execute on interval.
     */
     private intervalled: { [id: number]: { time: number, func: Function, passed: number } } = {}
+
+    /**
+    * Check if a value is a property but not part of the prototype of an object.
+    */
+    private hasProp(obj: any, name: string | number | symbol): boolean {
+        return obj.hasOwnProperty(name) && !Object.keys(Object.getPrototypeOf(obj)).includes(name.toString())
+    }
+
+    /**
+    * The player scoreboard.
+    */
+    public scoreboard: { [id: string]: Objective } = new Proxy({}, {
+        // TODO: Finish and remove no-invalid-this from eslint config.
+        get: (target, name, receiver): any => {
+            return Reflect.get(target, name, receiver)
+        },
+        deleteProperty: (target, name): boolean => {
+            return Reflect.deleteProperty(target, name)
+        },
+        set: (target, name, val, receiver): boolean => {
+            const reflection = Reflect.set(target, name, val, receiver)
+            if (this.hasProp(target, name) && typeof name === "string") {
+                this.cmd(`scoreboard objectives add ${name} dummy ${val.name || ""}`)
+                if (val.display) {
+                    if (val.display === "belowname") this.cmd(`scoreboard objectives setdisplay ${val.display} ${name}`)
+                    else this.cmd(`scoreboard objectives setdisplay ${val.display} ${name} ${val.order}`)
+                }
+                if (val.players) Object.entries(val.players).forEach(([n, v]) => this.cmd(`scoreboard players set ${n} ${name} ${v}`))
+            }
+            return reflection
+        },
+    });
 
     /**
     * @param obj The client or server object.
