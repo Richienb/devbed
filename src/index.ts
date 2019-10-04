@@ -125,6 +125,13 @@ interface Objective {
 }
 
 /**
+* An object referring players to their respective entities.
+*/
+interface PlayerEntityPair {
+    [username: string]: IEntity
+}
+
+/**
 * Custom events exposed by DevBed.
 */
 type IBedEvent = "first_tick" | "player_joined" | "player_left"
@@ -226,6 +233,11 @@ export class DevBed {
     public players: string[] = []
 
     /**
+    * The player objects.
+    */
+    private playerObj: PlayerEntityPair = {}
+
+    /**
     * The functions set to execute on interval.
     */
     private intervalled: { [id: number]: { time: number, func: Function, passed: number } } = {}
@@ -261,6 +273,17 @@ export class DevBed {
             return reflection
         },
     });
+
+    /**
+    * Filter an object.
+    * @param obj The object to filter.
+    * @param predicate The predicate to use.
+    */
+    private filterObject(obj: object, predicate: ([string, any]) => boolean): object {
+        return Object.keys(obj)
+            .filter(key => predicate([key, obj[key]]))
+            .reduce((res, key) => (res[key] = obj[key], res), {});
+    }
 
     /**
     * @param obj The client or server object.
@@ -316,12 +339,14 @@ export class DevBed {
             this.on(`${this.bedspace}:playerJoined`, ({ player }: NonNullable<IClientEnteredWorldEventData>) => {
                 const { name: username } = this.getComponent("minecraft:nameable", player)
                 this.players.push(username)
+                this.playerObj[username] = player
                 this.trigger("player_joined", { username, player })
             })
 
             this.on(`${this.bedspace}:playerLeft`, ({ player }: NonNullable<IClientEnteredWorldEventData>) => {
                 const { name: username } = this.getComponent("minecraft:nameable", player)
                 this.players = this.players.filter((val) => val !== username)
+                this.playerObj = this.filterObject(this.playerObj, ([val]) => val !== username) as PlayerEntityPair
                 this.trigger("player_left", { username, player })
             })
         }
@@ -414,6 +439,15 @@ export class DevBed {
     */
     public item(identifier?: string): BedEntity | null {
         return this.createEntity("item_entity", identifier)
+    }
+
+    /**
+    * Get an entity object from a player username.
+    * @param username The username to query.
+    * @entity
+    */
+    public getPlayer(username: string): IEntity | void {
+        return this.playerObj[username]
     }
 
     private parseTransform(data: object, transform: object | Function): object
