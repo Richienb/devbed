@@ -27,6 +27,14 @@
 /// <reference types="minecraft-scripting-types-client" />
 /// <reference types="minecraft-scripting-types-server" />
 
+import Promise from "bluebird"
+import _ from "lodash"
+
+Promise.config({
+    longStackTraces: false,
+    warnings: false,
+})
+
 /**
 * Entity object.
 */
@@ -258,6 +266,7 @@ export class DevBed {
             return Reflect.get(target, name, receiver)
         },
         deleteProperty: (target, name): boolean => {
+            this.cmd(`scoreboard objectives remove ${name.toString()}`)
             return Reflect.deleteProperty(target, name)
         },
         set: (target, name, val, receiver): boolean => {
@@ -273,17 +282,6 @@ export class DevBed {
             return reflection
         },
     });
-
-    /**
-    * Filter an object.
-    * @param obj The object to filter.
-    * @param predicate The predicate to use.
-    */
-    private filterObject(obj: object, predicate: ([string, any]) => boolean): object {
-        return Object.keys(obj)
-            .filter(key => predicate([key, obj[key]]))
-            .reduce((res, key) => (res[key] = obj[key], res), {});
-    }
 
     /**
     * @param obj The client or server object.
@@ -345,8 +343,8 @@ export class DevBed {
 
             this.on(`${this.bedspace}:playerLeft`, ({ player }: NonNullable<IClientEnteredWorldEventData>) => {
                 const { name: username } = this.getComponent("minecraft:nameable", player)
-                this.players = this.players.filter((val) => val !== username)
-                this.playerObj = this.filterObject(this.playerObj, ([val]) => val !== username) as PlayerEntityPair
+                _.pull(this.players, username)
+                _.omit(this.playerObj, username)
                 this.trigger("player_left", { username, player })
             })
         }
@@ -377,8 +375,8 @@ export class DevBed {
         return `${this.bedspace}:custom${this.ids}`
     }
 
-    private maybe(cb: Function, promise: Promise<any>): void
-    private maybe(cb: any, promise: Promise<any>): Promise<any>
+    private maybe(cb: Function, promise: Promise<unknown>): void
+    private maybe(cb: any, promise: Promise<unknown>): Promise<unknown>
 
     /**
     * Convert a promise to a callback function when needed.
@@ -460,7 +458,7 @@ export class DevBed {
     */
     private parseTransform(data: object | any[], transform: object | any[] | Function): object | any[] | void {
         if (Array.isArray(data) && Array.isArray(transform)) return [...data, ...transform]
-        else if (typeof data === "object" && typeof transform === "object") return { ...data, ...transform }
+        else if (_.isPlainObject(data) && _.isPlainObject(transform)) return { ...data, ...transform }
         else if (typeof transform === "function") return transform(data)
     }
 
@@ -572,7 +570,7 @@ export class DevBed {
     */
     public off(event: IListenableEvent, callback?: Function): void {
         event.split(" ").map((ev) => {
-            if (callback) this.callbacks[ev] = this.callbacks[ev].filter((val: Function) => val !== callback)
+            if (callback) _.pull(this.callbacks[ev], callback)
             else this.callbacks[ev] = []
         })
     }
@@ -627,7 +625,7 @@ export class DevBed {
                 }
             }
 
-            eventData.data = { ...eventData.data, ...typeof dataOrCb === "object" ? dataOrCb : {} }
+            eventData.data = { ...eventData.data, ..._.isPlainObject(dataOrCb) ? dataOrCb : {} }
 
             this.system.broadcastEvent(name, eventData)
         }
