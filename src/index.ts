@@ -288,6 +288,7 @@ export class DevBed {
     * @param bedspace The main DevBed namespace name to use.
     */
     constructor(obj: IClient | IServer, { bedspace = "devbed" } = {}) {
+        // TODO: Support pre-registered systems and DevBed objects.
         this.obj = obj
         this.system = (this.obj as any).registerSystem(DevBed.version.minor, DevBed.version.major)
         this.systemType = (this.obj as any).local_player ? "client" : "server"
