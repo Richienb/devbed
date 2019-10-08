@@ -14,7 +14,7 @@
         "build": "yarn js && yarn docs",
         "js": "microbundle --target node",
         "docs": "typedoc --out ./docs --mode file --target ES6 ./src",
-        "lint": "eslint src/*"
+        "lint": "eslint src --ext .ts"
     },
     "dependencies": {
         "bluebird": "^3.7.0",
@@ -23,18 +23,15 @@
     "devDependencies": {
         "@types/bluebird": "^3.5.27",
         "@types/lodash": "^4.14.142",
-        "@typescript-eslint/eslint-plugin": "^2.3.3",
-        "@typescript-eslint/parser": "^2.3.3",
         "eslint": "^6.5.1",
-        "eslint-config-google": "^0.14.0",
-        "eslint-config-richienb": "^0.0.1",
+        "eslint-config-richienb": "^0.1.1",
         "microbundle": "^0.11.0",
         "minecraft-scripting-types-client": "^1.0.0",
         "minecraft-scripting-types-server": "^1.0.0",
         "typedoc": "^0.15.0"
     },
     "resolutions": {
-        "microbundle/rollup-plugin-typescript2/rollup-pluginutils/micromatch/braces": "^2.3.1",
-        "microbundle/rollup-plugin-postcss/cssnano/postcss-svgo/svgo/js-yaml": "^3.13.0"
+        "microbundle/rollup-plugin-typescript2/rollup-pluginutils/micromatch/braces": "^3.0.2",
+        "microbundle/rollup-plugin-postcss/cssnano/postcss-svgo/svgo/js-yaml": "^3.13.1"
     }
 }

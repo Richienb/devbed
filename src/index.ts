@@ -195,7 +195,7 @@ export class DevBed {
     /**
     * The type of object the system is.
     */
-    private readonly systemType: "client" | "server"
+    public readonly systemType: "client" | "server"
 
     /**
     * The total ticks that have passed since the script started.
@@ -254,7 +254,7 @@ export class DevBed {
     * Check if a value is a property but not part of the prototype of an object.
     */
     private hasProp(obj: any, name: string | number | symbol): boolean {
-        return obj.hasOwnProperty(name) && !Object.keys(Object.getPrototypeOf(obj)).includes(name.toString())
+        return Object.prototype.hasOwnProperty.call(obj, name) && !Object.keys(Object.getPrototypeOf(obj)).includes(name.toString())
     }
 
     /**
@@ -287,12 +287,23 @@ export class DevBed {
     * @param obj The client or server object.
     * @param bedspace The main DevBed namespace name to use.
     */
-    constructor(obj: IClient | IServer, { bedspace = "devbed" } = {}) {
-        // TODO: Support pre-registered systems and DevBed objects.
-        this.obj = obj
-        this.system = (this.obj as any).registerSystem(DevBed.version.minor, DevBed.version.major)
-        this.systemType = (this.obj as any).local_player ? "client" : "server"
-
+    constructor(obj: IClient | IServer | IClientSystem<any> | IServerSystem<any> | DevBed, { bedspace = "devbed", object = undefined } = {}) {
+        if (obj instanceof DevBed) {
+            // Obj is a DevBed object
+            this.obj = obj.obj
+            this.system = obj.system
+            this.systemType = obj.systemType
+        } else if ((obj as ISystem<any>).createEntity) {
+            // Obj is a pre-registered system object (createEntity parameter exists)
+            this.obj = object
+            this.system = obj as IClientSystem<any> | IServerSystem<any>
+            this.systemType = (obj as IServerSystem<any>).executeCommand ? "server" : "client"
+        } else {
+            // Obj is a client or server object
+            this.obj = obj as IClient | IServer
+            this.system = (this.obj as any).registerSystem(DevBed.version.minor, DevBed.version.major)
+            this.systemType = (this.obj as any).local_player ? "client" : "server"
+        }
         this.bedspace = bedspace
 
         this.system.initialize = (...args: any): void => {
@@ -743,7 +754,7 @@ export class DevBed {
                     if (!Array.isArray(callbackOrAs)) callbackOrAs = [callbackOrAs]
 
                     callbackOrAs.map((username: string) => {
-                        if ((command as string).startsWith("c:")) this.cmd(`tellraw @a {"rawtext":[{"text":"<${username}> ${(command as string).slice(2).replace(/\"/g, "\\\"")}"}]}`, resolve)
+                        if ((command as string).startsWith("c:")) this.cmd(`tellraw @a {"rawtext":[{"text":"<${username}> ${(command as string).slice(2).replace(/(?:"|\\")/g, "\\\"")}"}]}`, resolve)
                         else this.cmd(`execute ${username} ~ ~ ~ ${command}`, resolve)
                     })
                 } else (this.system as IServerSystem<any>).executeCommand(command, ({ data }: IExecuteCommandCallback) => resolve(data))

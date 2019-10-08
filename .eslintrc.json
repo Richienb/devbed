@@ -1,7 +1,5 @@
 {
-    "extends": [
-        "richienb/ts"
-    ],
+    "extends": "richienb/ts",
     "rules": {
         "no-invalid-this": 0
     }
