@@ -1227,10 +1227,10 @@ eslint-config-google@^0.14.0:
   resolved "https://registry.yarnpkg.com/eslint-config-google/-/eslint-config-google-0.14.0.tgz#4f5f8759ba6e11b424294a219dbfa18c508bcc1a"
   integrity sha512-WsbX4WbjuMvTdeVL6+J3rK1RGhCTqjsFjX7UMSMgZiyxxaNLkoJENbrGExzERFeoTpGw3F3FypTiWAP9ZXzkEw==
 
-eslint-config-richienb@^0.1.1:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/eslint-config-richienb/-/eslint-config-richienb-0.1.1.tgz#47bd41748efde760be1021d0d7b42e0923a5e50d"
-  integrity sha512-F5l1HORUIlv/xKlH2/dYvhVZJ44z7mb/3RJxsa9L0Rx5zUJYApHl/Jbq9A7FDLq/K+62KwsZsOz8Eck2dZ+xWA==
+eslint-config-richienb@^0.1.2:
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/eslint-config-richienb/-/eslint-config-richienb-0.1.2.tgz#1d37f7d149a0fa60a17ea3f394952d880ff841f5"
+  integrity sha512-tUFoyhflkgdz91xiu/pf7FfwCfFt+GOXe70mSGtHCMf9pIvFJJW3MlsuNpTxI4lEYvpZ4/4xYqbZMSiSdDxO+Q==
   dependencies:
     "@typescript-eslint/eslint-plugin" "^2.3.2"
     "@typescript-eslint/parser" "^2.3.2"
