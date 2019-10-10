@@ -1,5 +1,8 @@
 {
-    "extends": "richienb/ts",
+    "extends": [
+        "richienb/ts",
+        "minecraft"
+    ],
     "rules": {
         "no-invalid-this": 0
     }

@@ -1227,6 +1227,11 @@ eslint-config-google@^0.14.0:
   resolved "https://registry.yarnpkg.com/eslint-config-google/-/eslint-config-google-0.14.0.tgz#4f5f8759ba6e11b424294a219dbfa18c508bcc1a"
   integrity sha512-WsbX4WbjuMvTdeVL6+J3rK1RGhCTqjsFjX7UMSMgZiyxxaNLkoJENbrGExzERFeoTpGw3F3FypTiWAP9ZXzkEw==
 
+eslint-config-minecraft@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/eslint-config-minecraft/-/eslint-config-minecraft-0.1.1.tgz#fb2ebc8a5dd5fbcc245b46b344ccaf4b47b62629"
+  integrity sha512-okKWN3mnmIQe4peRCHQRmJkSHmwzIFEsjwfIRTNZenSn2VU8w6UqiDoKUXAa0UDNfwKGoRpgr4uYwesoScnNMA==
+
 eslint-config-richienb@^0.1.2:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/eslint-config-richienb/-/eslint-config-richienb-0.1.2.tgz#1d37f7d149a0fa60a17ea3f394952d880ff841f5"
