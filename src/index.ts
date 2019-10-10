@@ -320,7 +320,7 @@ export class DevBed {
             if (this.ticks === 1) this.callEachCallback("first_tick", ...args)
             _.forOwn(this.intervalled, ({ time, func }, id) => {
                 this.intervalled[id].passed++
-                if (this.intervalled[id].passed === time) {
+                if (this.intervalled[id].passed >= time) {
                     this.intervalled[id].passed = 0
                     func()
                 }
@@ -985,12 +985,21 @@ export class DevBed {
     * @utility
     */
     public setTimeout(cb: Function, time: number, type: "ms" | "ticks" = "ms"): number {
-        const data = { id: undefined }
+        const data: { id: number } = { id: 0 }
         const func = (): void => {
             this.clearInterval(data.id)
             cb()
         }
         data.id = this.setInterval(func, time, type)
         return data.id
+    }
+
+    /**
+    * Execute a function in the very next tick.
+    * @param cb Callback to execute.
+    * @utility
+    */
+    public setImmediate(cb: Function): number {
+        return this.setTimeout(cb, 0)
     }
 }
