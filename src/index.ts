@@ -64,7 +64,7 @@ interface BedQuery extends IQuery {
     * Get the entities that the query captured.
     * @param cfields Filter the result by component fields.
     */
-    search(cfields?: [number, number, number, number, number, number]): any[] | null
+    search(cfields?: IDoubleCoords): any[] | null
 }
 
 /**
@@ -73,7 +73,7 @@ interface BedQuery extends IQuery {
 interface BedComponent extends IComponent<any> {
     /**
     * Add the component to an entity.
-    * @param ident The identifier of the entity.
+    * @param ent The identifier of the entity.
     * @param existsOk If false an error will be thrown if the component already exists on the entity.
     */
     add(ent: IEntity | BedEntity, existsOk: boolean): void,
@@ -158,6 +158,11 @@ type IStringable = string | object | boolean | number | undefined
 * An array that can hold 3 numbers of which represent coordinates.
 */
 type ICoords = [number, number, number]
+
+/**
+* An array that can hold 6 numbers of which represent coordinates.
+*/
+type IDoubleCoords = [number, number, number, number, number, number]
 
 /**
 * Chat colour codes.
@@ -277,7 +282,7 @@ export class DevBed {
                     if (val.display === "belowname") this.cmd(`scoreboard objectives setdisplay ${val.display} ${name}`)
                     else this.cmd(`scoreboard objectives setdisplay ${val.display} ${name} ${val.order}`)
                 }
-                if (val.players) Object.entries(val.players).forEach(([n, v]) => this.cmd(`scoreboard players set ${n} ${name} ${v}`))
+                if (val.players) _.forOwn(val.players, (v: string, n: string) => this.cmd(`scoreboard players set ${n} ${name} ${v}`))
             }
             return reflection
         },
@@ -313,7 +318,7 @@ export class DevBed {
         this.system.update = (...args: any): void => {
             this.ticks++
             if (this.ticks === 1) this.callEachCallback("first_tick", ...args)
-            Object.entries(this.intervalled).forEach(([id, { time, func }]) => {
+            _.forOwn(this.intervalled, ({ time, func }, id) => {
                 this.intervalled[id].passed++
                 if (this.intervalled[id].passed === time) {
                     this.intervalled[id].passed = 0
@@ -702,7 +707,7 @@ export class DevBed {
         if (obj === null) throw new ReferenceError("Unable to create the query.")
         return this.modifyPrototype(obj, {
             filter: (identifier: string): void => this.system.addFilterToQuery(obj, identifier),
-            search: (cfields?: [number, number, number, number, number, number]): any[] | null => cfields ?
+            search: (cfields?: IDoubleCoords): any[] | null => cfields ?
                 this.system.getEntitiesFromQuery(obj, cfields[0], cfields[1], cfields[2], cfields[3], cfields[4], cfields[5]) :
                 this.system.getEntitiesFromQuery(obj),
         })
@@ -768,7 +773,7 @@ export class DevBed {
     * @param coords 3 coords specifying the location of a block or 6 for an area of blocks.
     * @block
     */
-    public block(area: ITickingArea, coords: ICoords | [number, number, number, number, number, number]): IBlock | IBlock[][] | null {
+    public block(area: ITickingArea, coords: ICoords | IDoubleCoords): IBlock | IBlock[][] | null {
         return coords.length === 3 ? this.system.getBlock(area, coords[0], coords[1], coords[2]) : this.system.getBlocks(area, coords[0], coords[1], coords[2], coords[3], coords[4], coords[5])
     }
 
@@ -803,15 +808,27 @@ export class DevBed {
     * @param coords The coords of the block to check.
     * @param callback The callback to fire after checking.
     * @slash
-    * @beta
     */
     public blockAt(coords: ICoords, callback?: Function): Promise<string> | void {
-        return this.maybe(callback, new Promise((resolve): void | Promise<object> => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} Air`, ({ matches, statusMessage }: { matches: boolean, statusMessage: string }) => {
+        return this.maybe(callback, new Promise((resolve): void | Promise<object> => this.tempLoad(coords, () => this.cmd(`testforblock ${coords[0]} ${coords[1]} ${coords[2]} Air`, ({ matches, statusMessage }: { matches: boolean, statusMessage: string }) => {
             const res = statusMessage.match(/The block at .+,.+,.+ is (.+) \(expected .+\)\./)
             if (matches) resolve("Air")
             else if (res) resolve(res[1])
-            else resolve(undefined) // TODO: Force load block to check then unload.
-        })))
+            else resolve(undefined)
+        }))))
+    }
+
+    /**
+    * Temporarily force-load some blocks before calling a callback function and unloading them.
+    * @param coords The coords of the block to check.
+    * @param callback The callback to fire after checking.
+    * @slash
+    */
+    private tempLoad(coords: ICoords | IDoubleCoords, callback: Function): void {
+        this.cmd(`tickingarea add ${coords[0]} ${coords[1]} ${coords[2]} ${coords[3] || coords[0]} ${coords[4] || coords[1]} ${coords[5] || coords[2]}`, () => {
+            callback()
+            this.cmd(`tickingarea remove ${coords[0]} ${coords[1]} ${coords[2]}`)
+        })
     }
 
     /**
@@ -822,8 +839,8 @@ export class DevBed {
     * @shorthand
     */
     public rules(rules: object | string, data: boolean | number | string): void {
-        if (typeof rules === "object") return void Object.entries(rules).map((val) => this.cmd(`gamerule ${val[0]} ${val[1]}`))
-        return void this.cmd(`gamerule ${rules} ${data}`)
+        if (_.isPlainObject(rules)) return void _.forOwn(rules, (val, name) => this.cmd(`gamerule ${name} ${val}`))
+        else return void this.cmd(`gamerule ${rules} ${data}`)
     }
 
     /**
@@ -941,7 +958,7 @@ export class DevBed {
     * @utility
     */
     public setInterval(cb: Function, time: number, type: "ms" | "ticks" = "ms"): number {
-        const i = +Object.keys(this.intervalled).splice(-1) + 1 || 0
+        const i = +_.last(Object.keys(this.intervalled)) + 1 || 0
         this.intervalled[i] = {
             time: type === "ms" ? Math.round(time / 1000 * 20) : time,
             func: cb,
