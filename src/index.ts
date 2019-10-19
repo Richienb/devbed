@@ -628,7 +628,7 @@ export class DevBed {
                 sendName: name,
                 data: {
                     ...this.defaultData[name],
-                    ...typeof dataOrCb === "object" ? dataOrCb : {},
+                    ..._.isPlainObject(dataOrCb) ? dataOrCb : {},
                 },
                 id,
             })
@@ -653,9 +653,8 @@ export class DevBed {
     * @param val The value to convert.
     */
     private toString(val: IStringable): string {
-        if (typeof val === "object") return JSON.stringify(val)
-        else if (val === undefined) return "undefined"
-        else return val.toString()
+        if (_.isPlainObject(val)) return JSON.stringify(val)
+        else return _.toString(val)
     }
 
     /**
@@ -958,7 +957,7 @@ export class DevBed {
     * @utility
     */
     public setInterval(cb: Function, time: number, type: "ms" | "ticks" = "ms"): number {
-        const i = +_.last(Object.keys(this.intervalled)) + 1 || 0
+        const i = +_.findLastKey(this.intervalled) + 1 || 0
         this.intervalled[i] = {
             time: type === "ms" ? Math.round(time / 1000 * 20) : time,
             func: cb,
