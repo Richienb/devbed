@@ -27,13 +27,8 @@
 /// <reference types="minecraft-scripting-types-client" />
 /// <reference types="minecraft-scripting-types-server" />
 
-import Promise from "bluebird"
 import _ from "lodash"
-
-Promise.config({
-    longStackTraces: false,
-    warnings: false,
-})
+import Promise from "bluebird"
 
 /**
 * Entity object.
@@ -259,8 +254,13 @@ export class DevBed {
     * Check if a value is a property but not part of the prototype of an object.
     */
     private hasProp(obj: any, name: string | number | symbol): boolean {
-        return Object.prototype.hasOwnProperty.call(obj, name) && !Object.keys(Object.getPrototypeOf(obj)).includes(name.toString())
+        return Object.prototype.hasOwnProperty.call(obj, name) && !_.has(Object.getPrototypeOf(obj), name)
     }
+
+    /**
+    * A regex to match invalid characters in a scoreboard name.
+    */
+    private scoreboardInvalidRegex = /[,:()\r\n"%\0 ]/g
 
     /**
     * The player scoreboard.
@@ -277,6 +277,8 @@ export class DevBed {
         set: (target, name, val, receiver): boolean => {
             const reflection = Reflect.set(target, name, val, receiver)
             if (this.hasProp(target, name) && typeof name === "string") {
+                if (name.length > 16) throw new TypeError("Objective ID is too long!")
+                if (this.scoreboardInvalidRegex.test(name)) throw new TypeError("Objective ID contains invalid characters!")
                 this.cmd(`scoreboard objectives add ${name} dummy ${val.name || ""}`)
                 if (val.display) {
                     if (val.display === "belowname") this.cmd(`scoreboard objectives setdisplay ${val.display} ${name}`)
@@ -289,10 +291,11 @@ export class DevBed {
     });
 
     /**
-    * @param obj The client or server object.
-    * @param bedspace The main DevBed namespace name to use.
+    * @param obj.bedspace The main DevBed namespace name to use.
+    * @param obj.obj The client or server object.
     */
-    constructor(obj: IClient | IServer | IClientSystem<any> | IServerSystem<any> | DevBed, { bedspace = "devbed", object = undefined } = {}) {
+    constructor({ bedspace = "devbed", obj = typeof client !== "undefined" ? client : typeof server !== "undefined" ? server : undefined }: { bedspace?: string, obj?: IClient | IServer | IClientSystem<any> | IServerSystem<any> | DevBed } = {}) {
+        // TODO: Update README before release.
         if (obj instanceof DevBed) {
             // Obj is a DevBed object
             this.obj = obj.obj
@@ -300,7 +303,6 @@ export class DevBed {
             this.systemType = obj.systemType
         } else if ((obj as ISystem<any>).createEntity) {
             // Obj is a pre-registered system object (createEntity parameter exists)
-            this.obj = object
             this.system = obj as IClientSystem<any> | IServerSystem<any>
             this.systemType = (obj as IServerSystem<any>).executeCommand ? "server" : "client"
         } else {
