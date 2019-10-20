@@ -25,7 +25,7 @@
         "@types/lodash": "^4.14.144",
         "eslint": "^6.5.1",
         "eslint-config-minecraft": "^0.1.1",
-        "eslint-config-richienb": "^0.1.2",
+        "eslint-config-richienb": "^0.2.0",
         "microbundle": "^0.11.0",
         "minecraft-scripting-types-client": "^1.0.0",
         "minecraft-scripting-types-server": "^1.0.0",

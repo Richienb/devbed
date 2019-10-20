@@ -1222,6 +1222,11 @@ eslint-ast-utils@^1.1.0:
     lodash.get "^4.4.2"
     lodash.zip "^4.2.0"
 
+eslint-config-deprecated@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/eslint-config-deprecated/-/eslint-config-deprecated-1.0.0.tgz#d7ccc2082a2d49c670e2022162ebe8088812af46"
+  integrity sha512-kDiR3cdZqllgv4Brs7CSempMpWIoO7CPombTcBQVGNszVgoa5YKZhshw0ycxb3JquVYQ3UbBfSe4R34Z50UInQ==
+
 eslint-config-google@^0.14.0:
   version "0.14.0"
   resolved "https://registry.yarnpkg.com/eslint-config-google/-/eslint-config-google-0.14.0.tgz#4f5f8759ba6e11b424294a219dbfa18c508bcc1a"
@@ -1232,13 +1237,14 @@ eslint-config-minecraft@^0.1.1:
   resolved "https://registry.yarnpkg.com/eslint-config-minecraft/-/eslint-config-minecraft-0.1.1.tgz#fb2ebc8a5dd5fbcc245b46b344ccaf4b47b62629"
   integrity sha512-okKWN3mnmIQe4peRCHQRmJkSHmwzIFEsjwfIRTNZenSn2VU8w6UqiDoKUXAa0UDNfwKGoRpgr4uYwesoScnNMA==
 
-eslint-config-richienb@^0.1.2:
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/eslint-config-richienb/-/eslint-config-richienb-0.1.2.tgz#1d37f7d149a0fa60a17ea3f394952d880ff841f5"
-  integrity sha512-tUFoyhflkgdz91xiu/pf7FfwCfFt+GOXe70mSGtHCMf9pIvFJJW3MlsuNpTxI4lEYvpZ4/4xYqbZMSiSdDxO+Q==
+eslint-config-richienb@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/eslint-config-richienb/-/eslint-config-richienb-0.2.0.tgz#ffa14112467b7cafaee7e1f586baf9b76a23114f"
+  integrity sha512-dodvGO5LdLSa4SK5pSPclrZgZSodutSR4RR2NvlO7NUTs7Yo++wCpuTk5+wJZtw8M0yCuCShj6gEk1HEw51+tQ==
   dependencies:
     "@typescript-eslint/eslint-plugin" "^2.3.2"
     "@typescript-eslint/parser" "^2.3.2"
+    eslint-config-deprecated "^1.0.0"
     eslint-config-google "^0.14.0"
     eslint-plugin-import "^2.18.2"
     eslint-plugin-node "^10.0.0"
