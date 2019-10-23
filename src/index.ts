@@ -162,26 +162,29 @@ type IDoubleCoords = [number, number, number, number, number, number]
 /**
 * Chat colour codes.
 */
-/* eslint-disable no-unused-vars */
-export enum ChatColours {
-    darkRed = "§4",
-    red = "§c",
-    gold = "§6",
-    yellow = "§e",
-    darkGreen = "§2",
-    green = "§a",
-    aqua = "§b",
-    darkAqua = "§3",
-    darkBlue = "§1",
-    blue = "§9",
-    lightPurple = "§d",
-    darkPurple = "§5",
-    white = "§f",
-    grey = "§7",
-    darkGrey = "§8",
-    black = "§0"
+export const ChatCodes = {
+    darkRed: "§4",
+    red: "§c",
+    gold: "§6",
+    yellow: "§e",
+    darkGreen: "§2",
+    green: "§a",
+    aqua: "§b",
+    darkAqua: "§3",
+    darkBlue: "§1",
+    blue: "§9",
+    lightPurple: "§d",
+    darkPurple: "§5",
+    white: "§f",
+    grey: "§7",
+    darkGrey: "§8",
+    black: "§0",
+    bold: "§l",
+    strikethrough: "§m",
+    underline: "§n",
+    italic: "§o",
+    reset: "§r"
 }
-/* eslint-enable no-unused-vars */
 
 /**
 * A simplified implementation of the Minecraft Bedrock Scripting API.
@@ -335,7 +338,7 @@ export class DevBed {
             this.callEachCallback("shutdown", ...args)
         }
 
-        if (this.systemType === "server" && this.system.createEventData(`${this.bedspace}:DevBedEvent`)) this.chat(ChatColours.yellow + `Conflict detected. Please ensure the ${this.bedspace} namespace is not used by other scripts. If the issue persists, try changing your bedspace.`)
+        if (this.systemType === "server" && this.system.createEventData(`${this.bedspace}:DevBedEvent`)) this.chat(ChatCodes.yellow + `Conflict detected. Please ensure the ${this.bedspace} namespace is not used by other scripts. If the issue persists, try changing your bedspace.`)
 
         this.newEvent(`${this.bedspace}:DevBedEvent`, { isDevBed: true })
 
